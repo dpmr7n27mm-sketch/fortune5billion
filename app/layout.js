@@ -1,3 +1,8 @@
+export const metadata = {
+  title: 'FORTUNE5BILLION',
+  description: 'N.I.R.A. Vol 1 - Interactive Experience',
+}
+
 export default function RootLayout({ children }) {
   return (
     <html lang="en">
