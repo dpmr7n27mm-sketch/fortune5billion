@@ -1,7 +1,18 @@
 export default function RootLayout({ children }) {
   return (
     <html lang="en">
-      <body style={{ margin: 0, backgroundColor: '#050505' }}>
+      <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+        <meta name="theme-color" content="#0a0a0a" />
+        <title>N.I.R.A. | FORTUNE5BILLION</title>
+      </head>
+      <body style={{ 
+        margin: 0, 
+        padding: 0,
+        backgroundColor: '#0a0a0a',
+        minHeight: '100vh',
+        overflow: 'hidden'
+      }}>
         {children}
       </body>
     </html>
