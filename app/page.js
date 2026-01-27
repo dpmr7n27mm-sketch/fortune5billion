@@ -6,7 +6,7 @@ export default function FortuneHub() {
   // --- CAROUSEL LOGIC ---
   const [currentImage, setCurrentImage] = useState(0);
   const carouselImages = [
-    '/IMG_5769.PNG',  // Exact case match
+    '/IMG_5769.PNG',
     '/6C9A61AB-A0B2-407E-95CF-7B1F5CEBE4FF.PNG'
   ];
 
@@ -17,7 +17,7 @@ export default function FortuneHub() {
     return () => clearInterval(timer);
   }, [carouselImages.length]);
 
-  // --- GLITCH TEXT EFFECT ---
+  // --- GLITCH TEXT EFFECT (exact from game) ---
   const [glitchText, setGlitchText] = useState('NOTHING IS REAL ANYMORE');
 
   useEffect(() => {
@@ -45,18 +45,20 @@ export default function FortuneHub() {
   ];
 
   return (
-    <main style={{
-      background: 'linear-gradient(180deg, #0a0a0a 0%, #151515 100%)',
-      color: '#fff',
+    <div style={{
+      width: '100%',
       minHeight: '100vh',
+      background: 'linear-gradient(180deg, #0a0a0a 0%, #151515 100%)',
       display: 'flex',
       flexDirection: 'column',
       alignItems: 'center',
+      justifyContent: 'center',
       fontFamily: 'monospace',
+      color: '#fff',
       position: 'relative',
-      overflow: 'hidden',
+      padding: '40px 20px',
     }}>
-      {/* CRT Scanline Overlay */}
+      {/* CRT Scanline Overlay - exact from game */}
       <div style={{
         position: 'fixed',
         inset: 0,
@@ -64,155 +66,128 @@ export default function FortuneHub() {
         pointerEvents: 'none',
         zIndex: 100,
       }} />
-      
-      {/* Vignette */}
-      <div style={{
-        position: 'fixed',
-        inset: 0,
-        background: 'radial-gradient(ellipse at center, transparent 0%, rgba(0,0,0,0.4) 100%)',
-        pointerEvents: 'none',
-        zIndex: 99,
-      }} />
 
-      {/* Content Container */}
-      <div style={{
-        width: '100%',
-        maxWidth: 500,
-        padding: '40px 20px 100px',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
+      {/* Header - exact styling from game */}
+      <div style={{ 
+        fontSize: 11, 
+        color: '#555', 
+        letterSpacing: 3, 
+        marginBottom: 25,
+        textAlign: 'center',
       }}>
-        {/* Header */}
-        <div style={{
-          fontSize: 10,
-          color: '#444',
-          letterSpacing: 3,
-          marginBottom: 25,
-          textAlign: 'center',
-          width: '100%',
-        }}>
-          FORTUNE5BILLION PRESENTS
-        </div>
-
-        {/* Carousel */}
-        <div style={{
-          width: '100%',
-          maxWidth: 380,
-          aspectRatio: '1 / 1',
-          position: 'relative',
-          marginBottom: 20,
-          border: '2px solid #2a2a2a',
-          boxShadow: '0 0 40px rgba(0,0,0,0.8), 0 0 80px rgba(0,0,0,0.4)',
-          overflow: 'hidden',
-        }}>
-          {carouselImages.map((img, idx) => (
-            <img 
-              key={idx}
-              src={img} 
-              alt={`N.I.R.A. Vol 1 - Image ${idx + 1}`}
-              style={{
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                width: '100%',
-                height: '100%',
-                objectFit: 'cover',
-                opacity: currentImage === idx ? 1 : 0,
-                transition: 'opacity 0.8s ease-in-out',
-              }}
-            />
-          ))}
-        </div>
-
-        {/* Glitch Text */}
-        <div style={{
-          fontSize: 11,
-          color: '#555',
-          letterSpacing: 2,
-          marginBottom: 30,
-          textAlign: 'center',
-          width: '100%',
-        }}>
-          {glitchText}
-        </div>
-
-        {/* Button Stack */}
-        <nav style={{ width: '100%', maxWidth: 380, display: 'flex', flexDirection: 'column', gap: 12 }}>
-          {buttons.map((btn) => (
-            <a
-              key={btn.id}
-              href={btn.href}
-              target={btn.external ? '_blank' : undefined}
-              rel={btn.external ? 'noopener noreferrer' : undefined}
-              onMouseEnter={() => setHoveredButton(btn.id)}
-              onMouseLeave={() => setHoveredButton(null)}
-              style={{
-                display: 'block',
-                width: '100%',
-                padding: '16px 24px',
-                fontSize: 13,
-                fontFamily: 'monospace',
-                background: hoveredButton === btn.id ? '#fff' : 'transparent',
-                border: '2px solid #333',
-                borderColor: hoveredButton === btn.id ? '#fff' : '#333',
-                color: hoveredButton === btn.id ? '#000' : '#fff',
-                textDecoration: 'none',
-                letterSpacing: 3,
-                textAlign: 'center',
-                cursor: 'pointer',
-                transition: 'all 0.2s ease',
-              }}
-            >
-              {btn.label}
-            </a>
-          ))}
-        </nav>
-
-        {/* Footer Branding */}
-        <footer style={{
-          marginTop: 50,
-          textAlign: 'center',
-          width: '100%',
-        }}>
-          <div style={{
-            fontSize: 12,
-            color: '#666',
-            letterSpacing: 1,
-            fontStyle: 'italic',
-            marginBottom: 12,
-          }}>
-            An Auditory Experience designed by
-          </div>
-          
-          {/* Logo */}
-          <div style={{
-            marginBottom: 25,
-            display: 'flex',
-            justifyContent: 'center',
-          }}>
-            <img
-              src="/fortune5billion-logo.svg"
-              alt="fortune5billion"
-              style={{
-                width: 280,
-                height: 'auto',
-                filter: 'drop-shadow(0 0 8px rgba(137, 218, 89, 0.3))',
-              }}
-            />
-          </div>
-
-          {/* Copyright - exact match from game */}
-          <div style={{
-            fontSize: 8,
-            color: '#333',
-            marginTop: 8,
-            letterSpacing: 1,
-          }}>
-            © 2026 FORTUNE5BILLION INC. All Rights Reserved.
-          </div>
-        </footer>
+        FORTUNE5BILLION PRESENTS
       </div>
-    </main>
+
+      {/* Album Art Carousel */}
+      <div style={{
+        width: 320,
+        height: 320,
+        position: 'relative',
+        marginBottom: 25,
+        boxShadow: '0 0 60px rgba(0,0,0,0.8)',
+      }}>
+        {carouselImages.map((img, idx) => (
+          <img 
+            key={idx}
+            src={img} 
+            alt={`N.I.R.A. Vol 1`}
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              width: '100%',
+              height: '100%',
+              objectFit: 'cover',
+              opacity: currentImage === idx ? 1 : 0,
+              transition: 'opacity 0.8s ease-in-out',
+            }}
+          />
+        ))}
+      </div>
+
+      {/* Glitch Text - exact styling from game */}
+      <div style={{ 
+        fontSize: 13, 
+        color: '#666', 
+        letterSpacing: 2, 
+        marginBottom: 35,
+        textAlign: 'center',
+      }}>
+        {glitchText}
+      </div>
+
+      {/* Button Stack - matching game button style */}
+      <div style={{ 
+        display: 'flex', 
+        flexDirection: 'column', 
+        alignItems: 'center',
+        gap: 12,
+        marginBottom: 40,
+      }}>
+        {buttons.map((btn) => (
+          <a
+            key={btn.id}
+            href={btn.href}
+            target={btn.external ? '_blank' : undefined}
+            rel={btn.external ? 'noopener noreferrer' : undefined}
+            onMouseEnter={() => setHoveredButton(btn.id)}
+            onMouseLeave={() => setHoveredButton(null)}
+            style={{
+              padding: '14px 45px',
+              fontSize: 13,
+              fontFamily: 'monospace',
+              background: hoveredButton === btn.id ? '#fff' : 'transparent',
+              border: '2px solid #fff',
+              color: hoveredButton === btn.id ? '#000' : '#fff',
+              textDecoration: 'none',
+              letterSpacing: 4,
+              textAlign: 'center',
+              cursor: 'pointer',
+              transition: 'all 0.15s ease',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {btn.label}
+          </a>
+        ))}
+      </div>
+
+      {/* Footer - exact from game */}
+      <div style={{ 
+        position: 'absolute', 
+        bottom: 20, 
+        textAlign: 'center' 
+      }}>
+        <div style={{
+          fontSize: 12,
+          color: '#555',
+          letterSpacing: 1,
+          fontStyle: 'italic',
+          marginBottom: 15,
+        }}>
+          An Auditory Experience designed by
+        </div>
+        
+        <img
+          src="/fortune5billion-logo.svg"
+          alt="fortune5billion"
+          style={{
+            width: 240,
+            height: 'auto',
+            marginBottom: 15,
+            filter: 'drop-shadow(0 0 8px rgba(137, 218, 89, 0.3))',
+          }}
+        />
+
+        <div style={{ 
+          fontSize: 8, 
+          color: '#333', 
+          marginTop: 8, 
+          letterSpacing: 1 
+        }}>
+          © 2026 FORTUNE5BILLION INC. All Rights Reserved.
+        </div>
+      </div>
+    </div>
   );
 }
