@@ -148,6 +148,8 @@ export default function FortuneHub() {
         marginTop: 'auto',
         paddingTop: 30,
         paddingBottom: 20,
+        width: '100%',
+        background: 'linear-gradient(180deg, transparent 0%, #1a1a1a 30%)',
       }}>
         <div style={{
           fontSize: 12,
