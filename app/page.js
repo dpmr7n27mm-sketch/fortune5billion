@@ -142,11 +142,12 @@ export default function FortuneHub() {
         ))}
       </div>
 
-      {/* Footer - in normal flow, not absolute */}
+      {/* Footer */}
       <div style={{ 
         textAlign: 'center',
         marginTop: 'auto',
         paddingTop: 30,
+        paddingBottom: 20,
       }}>
         <div style={{
           fontSize: 12,
@@ -163,15 +164,12 @@ export default function FortuneHub() {
           alt="fortune5billion"
           style={{
             width: 240,
-            height: 'auto',
-            marginBottom: 20,
-            filter: 'drop-shadow(0 0 8px rgba(137, 218, 89, 0.3))',
+            height: 40,
             display: 'block',
             margin: '0 auto 20px auto',
           }}
         />
 
-        {/* Copyright - EXACT from game tap to start screen */}
         <div style={{ 
           fontSize: 8, 
           color: '#333', 
