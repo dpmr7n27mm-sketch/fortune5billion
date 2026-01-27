@@ -3,10 +3,10 @@
 import { useState, useEffect } from 'react';
 
 export default function FortuneHub() {
-  // --- CAROUSEL LOGIC (preserved) ---
+  // --- CAROUSEL LOGIC ---
   const [currentImage, setCurrentImage] = useState(0);
   const carouselImages = [
-    '/IMG_5769.png', 
+    '/IMG_5769.PNG',  // Exact case match
     '/6C9A61AB-A0B2-407E-95CF-7B1F5CEBE4FF.PNG'
   ];
 
@@ -17,7 +17,7 @@ export default function FortuneHub() {
     return () => clearInterval(timer);
   }, [carouselImages.length]);
 
-  // --- GLITCH TEXT EFFECT (from game) ---
+  // --- GLITCH TEXT EFFECT ---
   const [glitchText, setGlitchText] = useState('NOTHING IS REAL ANYMORE');
 
   useEffect(() => {
@@ -37,7 +37,7 @@ export default function FortuneHub() {
   const [hoveredButton, setHoveredButton] = useState(null);
 
   const buttons = [
-    { id: 'game', label: '▶ PLAY N.I.R.A. GAME NOW', href: '/game', external: false },
+    { id: 'game', label: '▶ PLAY N.I.R.A. GAME NOW', href: '/niragame', external: false },
     { id: 'presave', label: 'PRE-SAVE VOL 1 NOW', href: '#', external: false },
     { id: 'support', label: 'BUY HQ ALBUM / SUPPORT', href: 'https://ko-fi.com/fortune5billion', external: true },
     { id: 'licensing', label: 'LICENSING & SYNC', href: 'mailto:info@fortune5billion.com', external: false },
@@ -90,6 +90,7 @@ export default function FortuneHub() {
           letterSpacing: 3,
           marginBottom: 25,
           textAlign: 'center',
+          width: '100%',
         }}>
           FORTUNE5BILLION PRESENTS
         </div>
@@ -97,6 +98,7 @@ export default function FortuneHub() {
         {/* Carousel */}
         <div style={{
           width: '100%',
+          maxWidth: 380,
           aspectRatio: '1 / 1',
           position: 'relative',
           marginBottom: 20,
@@ -130,13 +132,13 @@ export default function FortuneHub() {
           letterSpacing: 2,
           marginBottom: 30,
           textAlign: 'center',
-          minHeight: 16,
+          width: '100%',
         }}>
           {glitchText}
         </div>
 
         {/* Button Stack */}
-        <nav style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <nav style={{ width: '100%', maxWidth: 380, display: 'flex', flexDirection: 'column', gap: 12 }}>
           {buttons.map((btn) => (
             <a
               key={btn.id}
@@ -200,9 +202,11 @@ export default function FortuneHub() {
             />
           </div>
 
+          {/* Copyright - exact match from game */}
           <div style={{
             fontSize: 8,
             color: '#333',
+            marginTop: 8,
             letterSpacing: 1,
           }}>
             © 2026 FORTUNE5BILLION INC. All Rights Reserved.
