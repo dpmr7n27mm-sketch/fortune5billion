@@ -55,18 +55,8 @@ export default function FortuneHub() {
       justifyContent: 'center',
       fontFamily: 'monospace',
       color: '#fff',
-      position: 'relative',
       padding: '40px 20px',
     }}>
-      {/* CRT Scanline Overlay - exact from game */}
-      <div style={{
-        position: 'fixed',
-        inset: 0,
-        background: 'repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.03) 2px, rgba(0,0,0,0.03) 4px)',
-        pointerEvents: 'none',
-        zIndex: 100,
-      }} />
-
       {/* Header - exact styling from game */}
       <div style={{ 
         fontSize: 11, 
@@ -116,13 +106,13 @@ export default function FortuneHub() {
         {glitchText}
       </div>
 
-      {/* Button Stack - matching game button style */}
+      {/* Button Stack */}
       <div style={{ 
         display: 'flex', 
         flexDirection: 'column', 
         alignItems: 'center',
         gap: 12,
-        marginBottom: 40,
+        marginBottom: 50,
       }}>
         {buttons.map((btn) => (
           <a
@@ -152,11 +142,11 @@ export default function FortuneHub() {
         ))}
       </div>
 
-      {/* Footer - exact from game */}
+      {/* Footer - in normal flow, not absolute */}
       <div style={{ 
-        position: 'absolute', 
-        bottom: 20, 
-        textAlign: 'center' 
+        textAlign: 'center',
+        marginTop: 'auto',
+        paddingTop: 30,
       }}>
         <div style={{
           fontSize: 12,
@@ -174,16 +164,19 @@ export default function FortuneHub() {
           style={{
             width: 240,
             height: 'auto',
-            marginBottom: 15,
+            marginBottom: 20,
             filter: 'drop-shadow(0 0 8px rgba(137, 218, 89, 0.3))',
+            display: 'block',
+            margin: '0 auto 20px auto',
           }}
         />
 
+        {/* Copyright - EXACT from game tap to start screen */}
         <div style={{ 
           fontSize: 8, 
           color: '#333', 
           marginTop: 8, 
-          letterSpacing: 1 
+          letterSpacing: 1,
         }}>
           © 2026 FORTUNE5BILLION INC. All Rights Reserved.
         </div>
