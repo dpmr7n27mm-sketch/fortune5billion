@@ -1,16 +1,46 @@
-import Link from 'next/link';
+"use client";
 
-export default function Hub() {
+import React from 'react';
+
+export default function FortuneHub() {
   return (
-    <main style={{ backgroundColor: '#050505', color: '#fff', minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', fontFamily: 'monospace', textAlign: 'center', padding: '20px' }}>
-      <h1 style={{ letterSpacing: '8px' }}>FORTUNE5BILLION.COM</h1>
-      <nav style={{ display: 'flex', flexDirection: 'column', gap: '15px', width: '300px' }}>
-        <Link href="/niragame" style={{ padding: '15px', border: '1px solid #fff', color: '#fff', textDecoration: 'none', textTransform: 'uppercase' }}>PLAY NIRA GAME NOW</Link>
-        <button style={{ padding: '15px', border: '1px solid #222', color: '#444', background: 'none', textTransform: 'uppercase' }}>STREAM VOL 1 (COMING SOON)</button>
-        <a href="https://ko-fi.com/fortune5billion" target="_blank" style={{ padding: '15px', border: '1px solid #444', color: '#888', textDecoration: 'none', textTransform: 'uppercase' }}>BUY HQ ALBUM / SUPPORT</a>
-        <a href="mailto:biz@fortune5billion.com" style={{ padding: '15px', border: '1px solid #444', color: '#888', textDecoration: 'none', textTransform: 'uppercase' }}>LICENSING & SYNC</a>
-      </nav>
-      <footer style={{ marginTop: '40px', fontSize: '10px', color: '#333' }}>© 2026 FORTUNE5BILLION INC. ALL RIGHTS RESERVED</footer>
+    <main className="min-h-screen bg-black text-white flex flex-col items-center justify-center p-4 font-serif">
+      <div className="max-w-2xl w-full text-center space-y-12">
+        <h1 className="text-6xl md:text-8xl tracking-tighter hover:italic transition-all duration-700 cursor-default">
+          FORTUNE 5 BILLION
+        </h1>
+        
+        <nav className="flex flex-col space-y-6 text-xl md:text-2xl">
+          {/* INTERNAL LINK: Same Tab */}
+          <a 
+            href="/niragame" 
+            className="hover:text-red-600 transition-colors duration-300 tracking-widest uppercase"
+          >
+            Play N.I.R.A. Game
+          </a>
+
+          {/* EXTERNAL LINKS: New Tab */}
+          <a 
+            href="https://ko-fi.com/yourlink" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="hover:text-gray-400 transition-colors duration-300 tracking-widest uppercase text-sm opacity-80"
+          >
+            Support on Ko-fi
+          </a>
+
+          <a 
+            href="mailto:business@fortune5billion.com" 
+            className="hover:text-gray-400 transition-colors duration-300 tracking-widest uppercase text-sm opacity-80"
+          >
+            Contact Business
+          </a>
+        </nav>
+
+        <div className="pt-20 text-xs tracking-[0.3em] uppercase opacity-30">
+          Dark Elegance • Established 2026
+        </div>
+      </div>
     </main>
   );
 }
