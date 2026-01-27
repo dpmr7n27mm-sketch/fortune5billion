@@ -12,62 +12,72 @@ export default function FortuneHub() {
       flexDirection: 'column',
       alignItems: 'center',
       justifyContent: 'center',
-      fontFamily: 'serif',
+      fontFamily: '"Times New Roman", serif',
       margin: 0,
-      padding: '20px',
+      padding: '40px',
       textAlign: 'center'
     }}>
-      <div style={{ maxWidth: '800px', width: '100%' }}>
+      <div style={{ maxWidth: '600px', width: '100%' }}>
         
-        {/* Main Title */}
-        <h1 style={{
-          fontSize: 'clamp(3rem, 10vw, 6rem)',
-          letterSpacing: '-0.05em',
-          margin: '0 0 60px 0',
-          fontWeight: 'normal',
-          textTransform: 'uppercase'
-        }}>
-          FORTUNE 5 BILLION
-        </h1>
-        
-        {/* Navigation Links */}
+        {/* Visual Header - Replacing the text title */}
+        <div style={{ marginBottom: '50px' }}>
+          <img 
+            src="/IMG_5769.png" 
+            alt="Fortune 5 Billion - Nothing is real anymore"
+            style={{ 
+              width: '100%', 
+              maxWidth: '500px', 
+              filter: 'grayscale(100%) contrast(120%)',
+              marginBottom: '20px'
+            }} 
+          />
+        </div>
+
+        {/* Navigation - Back to the original minimalist flow */}
         <nav style={{ 
           display: 'flex', 
           flexDirection: 'column', 
-          gap: '30px',
+          gap: '40px',
           alignItems: 'center' 
         }}>
           
-          {/* INTERNAL LINK: Same Tab */}
+          {/* INTERNAL LINK: Same Tab (No target="_blank") */}
           <a 
             href="/niragame" 
             style={{
               color: 'white',
               textDecoration: 'none',
-              fontSize: '1.5rem',
-              letterSpacing: '0.2em',
+              fontSize: '1.8rem',
+              letterSpacing: '0.3em',
               textTransform: 'uppercase',
-              border: '1px solid rgba(255,255,255,0.3)',
-              padding: '10px 40px',
-              transition: 'all 0.3s ease'
+              transition: 'all 0.5s ease',
+              opacity: 0.9
             }}
-            onMouseOver={(e) => { e.target.style.color = '#ff0000'; e.target.style.borderColor = '#ff0000'; }}
-            onMouseOut={(e) => { e.target.style.color = 'white'; e.target.style.borderColor = 'rgba(255,255,255,0.3)'; }}
+            onMouseOver={(e) => { e.target.style.color = '#ff0000'; e.target.style.letterSpacing = '0.5em'; }}
+            onMouseOut={(e) => { e.target.style.color = 'white'; e.target.style.letterSpacing = '0.3em'; }}
           >
             Play N.I.R.A. Game
           </a>
 
-          {/* EXTERNAL LINKS: New Tab */}
-          <div style={{ display: 'flex', gap: '20px', marginTop: '20px' }}>
+          {/* EXTERNAL LINKS: New Tab (Has target="_blank") */}
+          <div style={{ 
+            display: 'flex', 
+            flexDirection: 'column', 
+            gap: '20px', 
+            marginTop: '40px',
+            borderTop: '1px solid rgba(255,255,255,0.1)',
+            paddingTop: '40px',
+            width: '100%'
+          }}>
             <a 
               href="https://ko-fi.com/yourlink" 
               target="_blank" 
               rel="noopener noreferrer"
               style={{
-                color: 'rgba(255,255,255,0.5)',
+                color: 'rgba(255,255,255,0.4)',
                 textDecoration: 'none',
-                fontSize: '0.8rem',
-                letterSpacing: '0.1em',
+                fontSize: '0.9rem',
+                letterSpacing: '0.2em',
                 textTransform: 'uppercase'
               }}
             >
@@ -77,10 +87,10 @@ export default function FortuneHub() {
             <a 
               href="mailto:business@fortune5billion.com" 
               style={{
-                color: 'rgba(255,255,255,0.5)',
+                color: 'rgba(255,255,255,0.4)',
                 textDecoration: 'none',
-                fontSize: '0.8rem',
-                letterSpacing: '0.1em',
+                fontSize: '0.9rem',
+                letterSpacing: '0.2em',
                 textTransform: 'uppercase'
               }}
             >
@@ -89,15 +99,15 @@ export default function FortuneHub() {
           </div>
         </nav>
 
-        {/* Footer */}
+        {/* Footer - The original subtle mark */}
         <div style={{
-          marginTop: '100px',
+          marginTop: '80px',
           fontSize: '0.6rem',
-          letterSpacing: '0.4em',
+          letterSpacing: '0.5em',
           textTransform: 'uppercase',
-          opacity: 0.3
+          opacity: 0.2
         }}>
-          Dark Elegance • Established 2026
+          Established 2026 • Volume One
         </div>
       </div>
     </main>
