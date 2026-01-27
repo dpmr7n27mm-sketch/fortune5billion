@@ -12,33 +12,30 @@ export default function FortuneHub() {
       flexDirection: 'column',
       alignItems: 'center',
       justifyContent: 'center',
-      fontFamily: '"Times New Roman", serif',
       margin: 0,
-      padding: '40px',
+      padding: '20px',
       textAlign: 'center'
     }}>
-      <div style={{ maxWidth: '600px', width: '100%' }}>
+      <div style={{ width: '100%', maxWidth: '800px' }}>
         
-        {/* Visual Header - Replacing the text title */}
-        <div style={{ marginBottom: '50px' }}>
+        {/* Header Image - Using your uploaded branding */}
+        <div style={{ marginBottom: '80px' }}>
           <img 
-            src="/IMG_5769.png" 
-            alt="Fortune 5 Billion - Nothing is real anymore"
+            src="/fortune5billion N.I.R.A. Vol.1.png" 
+            alt="An Auditory Experience designed by FORTUNE5BILLION"
             style={{ 
               width: '100%', 
-              maxWidth: '500px', 
-              filter: 'grayscale(100%) contrast(120%)',
-              marginBottom: '20px'
+              maxWidth: '600px', 
+              filter: 'brightness(1.2)' 
             }} 
           />
         </div>
 
-        {/* Navigation - Back to the original minimalist flow */}
+        {/* The Original Minimalist Nav */}
         <nav style={{ 
           display: 'flex', 
           flexDirection: 'column', 
-          gap: '40px',
-          alignItems: 'center' 
+          gap: '30px' 
         }}>
           
           {/* INTERNAL LINK: Same Tab (No target="_blank") */}
@@ -47,28 +44,20 @@ export default function FortuneHub() {
             style={{
               color: 'white',
               textDecoration: 'none',
-              fontSize: '1.8rem',
-              letterSpacing: '0.3em',
+              fontSize: 'clamp(1.5rem, 5vw, 2.5rem)',
               textTransform: 'uppercase',
-              transition: 'all 0.5s ease',
-              opacity: 0.9
+              letterSpacing: '0.4em',
+              fontWeight: '300',
+              transition: 'all 0.6s cubic-bezier(0.16, 1, 0.3, 1)'
             }}
-            onMouseOver={(e) => { e.target.style.color = '#ff0000'; e.target.style.letterSpacing = '0.5em'; }}
-            onMouseOut={(e) => { e.target.style.color = 'white'; e.target.style.letterSpacing = '0.3em'; }}
+            onMouseOver={(e) => { e.target.style.color = '#ff0000'; e.target.style.letterSpacing = '0.6em'; e.target.style.fontStyle = 'italic'; }}
+            onMouseOut={(e) => { e.target.style.color = 'white'; e.target.style.letterSpacing = '0.4em'; e.target.style.fontStyle = 'normal'; }}
           >
-            Play N.I.R.A. Game
+            Play N.I.R.A.
           </a>
 
           {/* EXTERNAL LINKS: New Tab (Has target="_blank") */}
-          <div style={{ 
-            display: 'flex', 
-            flexDirection: 'column', 
-            gap: '20px', 
-            marginTop: '40px',
-            borderTop: '1px solid rgba(255,255,255,0.1)',
-            paddingTop: '40px',
-            width: '100%'
-          }}>
+          <div style={{ marginTop: '60px', display: 'flex', flexDirection: 'column', gap: '15px' }}>
             <a 
               href="https://ko-fi.com/yourlink" 
               target="_blank" 
@@ -76,8 +65,8 @@ export default function FortuneHub() {
               style={{
                 color: 'rgba(255,255,255,0.4)',
                 textDecoration: 'none',
-                fontSize: '0.9rem',
-                letterSpacing: '0.2em',
+                fontSize: '0.8rem',
+                letterSpacing: '0.3em',
                 textTransform: 'uppercase'
               }}
             >
@@ -89,21 +78,21 @@ export default function FortuneHub() {
               style={{
                 color: 'rgba(255,255,255,0.4)',
                 textDecoration: 'none',
-                fontSize: '0.9rem',
-                letterSpacing: '0.2em',
+                fontSize: '0.8rem',
+                letterSpacing: '0.3em',
                 textTransform: 'uppercase'
               }}
             >
-              Business Inquiry
+              Business Inquiries
             </a>
           </div>
         </nav>
 
-        {/* Footer - The original subtle mark */}
+        {/* Footer */}
         <div style={{
-          marginTop: '80px',
-          fontSize: '0.6rem',
-          letterSpacing: '0.5em',
+          marginTop: '120px',
+          fontSize: '0.55rem',
+          letterSpacing: '0.6em',
           textTransform: 'uppercase',
           opacity: 0.2
         }}>
