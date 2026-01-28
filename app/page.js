@@ -55,6 +55,7 @@ export default function FortuneHub() {
       justifyContent: 'center',
       fontFamily: 'monospace',
       color: '#fff',
+      position: 'relative',
       padding: '40px 20px',
     }}>
       {/* Header - exact styling from game */}
@@ -142,41 +143,31 @@ export default function FortuneHub() {
         ))}
       </div>
 
-      {/* Footer */}
+      {/* Footer - EXACT from game tap to start screen */}
       <div style={{ 
-        textAlign: 'center',
-        marginTop: 'auto',
-        paddingTop: 30,
-        paddingBottom: 20,
-        width: '100%',
-        background: 'linear-gradient(180deg, transparent 0%, #1a1a1a 30%)',
+        position: 'absolute', 
+        bottom: 20, 
+        textAlign: 'center' 
       }}>
-        <div style={{
-          fontSize: 12,
-          color: '#555',
-          letterSpacing: 1,
-          fontStyle: 'italic',
-          marginBottom: 15,
-        }}>
-          An Auditory Experience designed by
-        </div>
-        
-        <img
-          src="/fortune5billion-logo.svg"
-          alt="fortune5billion"
-          style={{
-            width: 240,
-            height: 40,
-            display: 'block',
-            margin: '0 auto 20px auto',
+        <a 
+          href="https://fortune5billion.com" 
+          style={{ 
+            fontSize: 9, 
+            color: '#666', 
+            textDecoration: 'none', 
+            letterSpacing: 2, 
+            display: 'inline-block', 
+            padding: '12px 20px', 
+            cursor: 'pointer' 
           }}
-        />
-
+        >
+          VISIT FORTUNE5BILLION.COM
+        </a>
         <div style={{ 
           fontSize: 8, 
           color: '#333', 
           marginTop: 8, 
-          letterSpacing: 1,
+          letterSpacing: 1 
         }}>
           © 2026 FORTUNE5BILLION INC. All Rights Reserved.
         </div>
