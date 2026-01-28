@@ -52,10 +52,11 @@ export default function FortuneHub() {
       display: 'flex',
       flexDirection: 'column',
       alignItems: 'center',
-      justifyContent: 'center',
       fontFamily: 'monospace',
       color: '#fff',
       padding: '40px 20px',
+      boxSizing: 'border-box',
+      overflowX: 'hidden',
     }}>
       {/* Header - exact styling from game */}
       <div style={{ 
@@ -70,8 +71,9 @@ export default function FortuneHub() {
 
       {/* Album Art Carousel */}
       <div style={{
-        width: 320,
-        height: 320,
+        width: '100%',
+        maxWidth: 320,
+        aspectRatio: '1 / 1',
         position: 'relative',
         marginBottom: 25,
         boxShadow: '0 0 60px rgba(0,0,0,0.8)',
@@ -112,7 +114,8 @@ export default function FortuneHub() {
         flexDirection: 'column', 
         alignItems: 'center',
         gap: 12,
-        marginBottom: 50,
+        width: '100%',
+        maxWidth: 400,
       }}>
         {buttons.map((btn) => (
           <a
@@ -123,18 +126,19 @@ export default function FortuneHub() {
             onMouseEnter={() => setHoveredButton(btn.id)}
             onMouseLeave={() => setHoveredButton(null)}
             style={{
-              padding: '14px 45px',
-              fontSize: 13,
+              padding: '14px 20px',
+              fontSize: 12,
               fontFamily: 'monospace',
               background: hoveredButton === btn.id ? '#fff' : 'transparent',
               border: '2px solid #fff',
               color: hoveredButton === btn.id ? '#000' : '#fff',
               textDecoration: 'none',
-              letterSpacing: 4,
+              letterSpacing: 3,
               textAlign: 'center',
               cursor: 'pointer',
               transition: 'all 0.15s ease',
-              whiteSpace: 'nowrap',
+              width: '100%',
+              boxSizing: 'border-box',
             }}
           >
             {btn.label}
@@ -145,7 +149,7 @@ export default function FortuneHub() {
       {/* Footer - copyright only, in document flow */}
       <div style={{ 
         textAlign: 'center',
-        marginTop: 30,
+        marginTop: 40,
         paddingBottom: 20,
       }}>
         <div style={{ 
