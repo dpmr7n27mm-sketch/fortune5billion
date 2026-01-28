@@ -11,7 +11,6 @@ export default function RootLayout({ children }) {
         padding: 0,
         backgroundColor: '#0a0a0a',
         minHeight: '100vh',
-        overflow: 'hidden'
       }}>
         {children}
       </body>
