@@ -12,6 +12,15 @@ export default function RootLayout({ children }) {
           div {
             transform-origin: center center;
           }
+          /* Hide scrollbar but keep scrolling */
+          html, body {
+            scrollbar-width: none; /* Firefox */
+            -ms-overflow-style: none; /* IE/Edge */
+          }
+          html::-webkit-scrollbar,
+          body::-webkit-scrollbar {
+            display: none; /* Chrome, Safari, Opera */
+          }
         `}</style>
       </head>
       <body style={{ 
