@@ -55,7 +55,6 @@ export default function FortuneHub() {
       justifyContent: 'center',
       fontFamily: 'monospace',
       color: '#fff',
-      position: 'relative',
       padding: '40px 20px',
     }}>
       {/* Header - exact styling from game */}
@@ -143,30 +142,15 @@ export default function FortuneHub() {
         ))}
       </div>
 
-      {/* Footer - EXACT from game tap to start screen */}
+      {/* Footer - copyright only, in document flow */}
       <div style={{ 
-        position: 'absolute', 
-        bottom: 20, 
-        textAlign: 'center' 
+        textAlign: 'center',
+        marginTop: 30,
+        paddingBottom: 20,
       }}>
-        <a 
-          href="https://fortune5billion.com" 
-          style={{ 
-            fontSize: 9, 
-            color: '#666', 
-            textDecoration: 'none', 
-            letterSpacing: 2, 
-            display: 'inline-block', 
-            padding: '12px 20px', 
-            cursor: 'pointer' 
-          }}
-        >
-          VISIT FORTUNE5BILLION.COM
-        </a>
         <div style={{ 
           fontSize: 8, 
           color: '#333', 
-          marginTop: 8, 
           letterSpacing: 1 
         }}>
           © 2026 FORTUNE5BILLION INC. All Rights Reserved.
