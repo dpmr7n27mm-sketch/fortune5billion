@@ -5,6 +5,14 @@ export default function RootLayout({ children }) {
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
         <meta name="theme-color" content="#0a0a0a" />
         <title>N.I.R.A. | FORTUNE5BILLION</title>
+        <style>{`
+          *, *::before, *::after {
+            box-sizing: border-box;
+          }
+          div {
+            transform-origin: center center;
+          }
+        `}</style>
       </head>
       <body style={{ 
         margin: 0, 
