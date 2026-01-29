@@ -15,7 +15,7 @@ const createMusicPlayer = () => {
   let audio = null;
   let isLoaded = false;
   let loopChecker = null;
-  const LOOP_POINT = 22.3;
+  const LOOP_POINT = 22.4;
   
   return {
     load: (src) => {
@@ -500,12 +500,11 @@ export default function NIRAGame() {
   const hitMessages = ["THEY TOOK YOUR FORTUNE", "BAD DEAL SIGNED", "READ THE FINE PRINT", "360 DEAL ACTIVATED", "LOST YOUR MASTERS", "RIGHTS GONE IN PERPETUITY", "ADVANCE TRAP", "SIGNED YOUR RIGHTS AWAY"];
 
   const initGame = useCallback(() => {
-    if (!audioCtxRef.current) audioCtxRef.current = createAudioContext();
-    
-    // Resume AudioContext if suspended (fixes sound effects not playing after restart)
-    if (audioCtxRef.current && audioCtxRef.current.state === 'suspended') {
-      audioCtxRef.current.resume();
+    // Always recreate AudioContext to fix stale audio after idle
+    if (audioCtxRef.current) {
+      try { audioCtxRef.current.close(); } catch (e) {}
     }
+    audioCtxRef.current = createAudioContext();
     
     // Resume music if it was stopped (on death/win)
     try {
