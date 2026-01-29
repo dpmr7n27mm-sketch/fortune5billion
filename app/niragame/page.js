@@ -10,10 +10,11 @@ const createAudioContext = () => {
   return null;
 };
 
-// Background Music Controller - simple native loop
+// Background Music Controller - manual loop to avoid MP3 padding
 const createMusicPlayer = () => {
   let audio = null;
   let isLoaded = false;
+  const LOOP_POINT = 22.5; // Loop just before end to avoid encoder padding
   
   return {
     load: (src) => {
@@ -22,8 +23,13 @@ const createMusicPlayer = () => {
         audio.src = '';
       }
       audio = new Audio(src);
-      audio.loop = true;
       audio.volume = 0.4;
+      
+      audio.addEventListener('timeupdate', () => {
+        if (audio.currentTime >= LOOP_POINT) {
+          audio.currentTime = 0;
+        }
+      });
       
       audio.addEventListener('canplaythrough', () => {
         isLoaded = true;
