@@ -54,9 +54,10 @@ export default function FortuneHub() {
       alignItems: 'center',
       fontFamily: 'monospace',
       color: '#fff',
-      padding: '40px 20px',
+      padding: '40px 20px 80px 20px',
       boxSizing: 'border-box',
       overflowX: 'hidden',
+      position: 'relative',
     }}>
       {/* Header - exact styling from game */}
       <div style={{ 
@@ -146,11 +147,11 @@ export default function FortuneHub() {
         ))}
       </div>
 
-      {/* Footer - copyright only, in document flow */}
+      {/* Footer - exact placement from game screens */}
       <div style={{ 
+        position: 'absolute',
+        bottom: 20,
         textAlign: 'center',
-        marginTop: 40,
-        paddingBottom: 20,
       }}>
         <div style={{ 
           fontSize: 8, 
