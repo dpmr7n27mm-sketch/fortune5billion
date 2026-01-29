@@ -10,11 +10,12 @@ const createAudioContext = () => {
   return null;
 };
 
-// Background Music Controller - manual loop to avoid MP3 padding
+// Background Music Controller - precise loop timing
 const createMusicPlayer = () => {
   let audio = null;
   let isLoaded = false;
-  const LOOP_POINT = 22.3; // Loop just before end to avoid encoder padding
+  let loopChecker = null;
+  const LOOP_POINT = 22.3;
   
   return {
     load: (src) => {
@@ -22,15 +23,10 @@ const createMusicPlayer = () => {
         audio.pause();
         audio.src = '';
       }
+      if (loopChecker) clearInterval(loopChecker);
+      
       audio = new Audio(src);
       audio.volume = 0.4;
-      
-      audio.addEventListener('timeupdate', () => {
-        if (audio.currentTime >= LOOP_POINT) {
-          audio.currentTime = 0;
-          audio.play().catch(() => {});
-        }
-      });
       
       audio.addEventListener('canplaythrough', () => {
         isLoaded = true;
@@ -38,18 +34,29 @@ const createMusicPlayer = () => {
       audio.load();
     },
     play: () => {
-      if (audio && isLoaded) {
+      if (loopChecker) clearInterval(loopChecker);
+      
+      const startPlayback = () => {
         audio.play().catch(() => {});
+        loopChecker = setInterval(() => {
+          if (audio && audio.currentTime >= LOOP_POINT) {
+            audio.currentTime = 0;
+          }
+        }, 16); // Check every 16ms (~60fps) for precise timing
+      };
+      
+      if (audio && isLoaded) {
+        startPlayback();
       } else if (audio) {
-        audio.addEventListener('canplaythrough', () => {
-          audio.play().catch(() => {});
-        }, { once: true });
+        audio.addEventListener('canplaythrough', startPlayback, { once: true });
       }
     },
     pause: () => {
       if (audio) audio.pause();
+      if (loopChecker) clearInterval(loopChecker);
     },
     stop: () => {
+      if (loopChecker) clearInterval(loopChecker);
       if (audio) { audio.pause(); audio.currentTime = 0; }
     },
     setVolume: (vol) => {
@@ -495,6 +502,11 @@ export default function NIRAGame() {
   const initGame = useCallback(() => {
     if (!audioCtxRef.current) audioCtxRef.current = createAudioContext();
     
+    // Resume AudioContext if suspended (fixes sound effects not playing after restart)
+    if (audioCtxRef.current && audioCtxRef.current.state === 'suspended') {
+      audioCtxRef.current.resume();
+    }
+    
     // Resume music if it was stopped (on death/win)
     try {
       if (musicPlayerRef.current) {
@@ -599,9 +611,9 @@ export default function NIRAGame() {
   const Executive = ({ screenX }) => (<div style={{ position: 'absolute', left: Math.round(screenX), top: GROUND - 72, transform: 'translateZ(0)' }}><svg width="56" height="72" viewBox="0 0 14 18" shapeRendering="crispEdges"><rect x="4" y="0" width="6" height="1" fill="#2d2d2d"/><rect x="3" y="1" width="8" height="2" fill="#2d2d2d"/><rect x="4" y="3" width="6" height="1" fill="#f5ddd0"/><rect x="3" y="4" width="8" height="3" fill="#f5ddd0"/><rect x="5" y="7" width="4" height="1" fill="#f5ddd0"/><rect x="2" y="8" width="10" height="5" fill="#1a1a1a"/><rect x="5" y="8" width="1" height="1" fill="#ffffff"/><rect x="8" y="8" width="1" height="1" fill="#ffffff"/><rect x="6" y="8" width="2" height="4" fill="#dc2626"/><rect x="0" y="9" width="2" height="3" fill="#1a1a1a"/><rect x="0" y="12" width="2" height="1" fill="#f5ddd0"/><rect x="12" y="9" width="2" height="3" fill="#1a1a1a"/><rect x="12" y="12" width="2" height="1" fill="#f5ddd0"/><rect x="3" y="13" width="8" height="1" fill="#1f1f1f"/><rect x="3" y="14" width="3" height="3" fill="#1f1f1f"/><rect x="8" y="14" width="3" height="3" fill="#1f1f1f"/><rect x="2" y="17" width="4" height="1" fill="#0a0a0a"/><rect x="8" y="17" width="4" height="1" fill="#0a0a0a"/></svg></div>);
   const Player = ({ flash, invincible, y }) => (<div style={{ position: 'absolute', left: 80, top: Math.round(y - 64), opacity: invincible ? 0.6 : 1, filter: flash ? 'brightness(2)' : 'none', transform: 'translateZ(0)' }}><svg width="48" height="64" viewBox="0 0 12 16" shapeRendering="crispEdges"><rect x="3" y="0" width="6" height="1" fill="#1a1a1a"/><rect x="2" y="1" width="8" height="1" fill="#1a1a1a"/><rect x="2" y="2" width="8" height="2" fill="#1a1a1a"/><rect x="3" y="4" width="6" height="1" fill="#c4956a"/><rect x="2" y="5" width="8" height="2" fill="#c4956a"/><rect x="4" y="7" width="4" height="1" fill="#c4956a"/><rect x="2" y="8" width="8" height="4" fill="#2563eb"/><rect x="0" y="8" width="2" height="1" fill="#c4956a"/><rect x="0" y="9" width="2" height="2" fill="#c4956a"/><rect x="10" y="8" width="2" height="1" fill="#c4956a"/><rect x="10" y="9" width="2" height="2" fill="#c4956a"/><rect x="2" y="12" width="8" height="1" fill="#1a1a1a"/><rect x="2" y="13" width="3" height="2" fill="#1a1a1a"/><rect x="7" y="13" width="3" height="2" fill="#1a1a1a"/><rect x="1" y="15" width="4" height="1" fill="#374151"/><rect x="7" y="15" width="4" height="1" fill="#374151"/></svg></div>);
 
-  if (gameState === 'start') return (<div style={{ width: '100%', height: '100dvh', minHeight: 500, overflow: 'hidden', background: 'linear-gradient(180deg, #0a0a0a 0%, #151515 100%)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', fontFamily: 'monospace', color: '#fff', position: 'relative' }}><div style={{ fontSize: 11, color: '#555', letterSpacing: 3, marginBottom: 25 }}>FORTUNE5BILLION PRESENTS</div><div style={{ position: 'relative', width: 70, height: 55, marginBottom: 25, filter: 'drop-shadow(0 0 8px rgba(255,255,255,0.8)) drop-shadow(0 0 15px rgba(200,200,255,0.6))' }}><div style={{ position: 'absolute', left: 0, width: 30, height: 45, background: 'linear-gradient(135deg, #4a4a4a 0%, #1a1a1a 30%, #000 50%, #3a3a3a 70%, #1a1a1a 100%)', borderRadius: '50% 0 0 50%', border: '2px solid #666', transform: 'rotate(-15deg)' }} /><div style={{ position: 'absolute', right: 0, width: 30, height: 45, background: 'linear-gradient(225deg, #4a4a4a 0%, #1a1a1a 30%, #000 50%, #3a3a3a 70%, #1a1a1a 100%)', borderRadius: '0 50% 50% 0', border: '2px solid #666', transform: 'rotate(15deg)' }} /><div style={{ position: 'absolute', left: 17, top: 18, width: 36, height: 10, background: '#f5f5f0', borderRadius: 2, boxShadow: '0 0 6px rgba(255,255,255,0.5)' }} /><div style={{ position: 'absolute', left: 8, top: 8, width: 10, height: 10, background: 'linear-gradient(135deg, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.3) 50%, transparent 100%)', borderRadius: '50%' }} /><div style={{ position: 'absolute', right: 12, top: 28, width: 5, height: 5, background: 'rgba(255,255,255,0.6)', borderRadius: '50%' }} /></div><h1 style={{ fontSize: 42, fontWeight: 'bold', letterSpacing: 8, margin: 0, textShadow: '0 0 25px rgba(255,255,255,0.2)' }}>N.I.R.A.</h1><div style={{ fontSize: 13, color: '#666', letterSpacing: 2, marginTop: 8, marginBottom: 35 }}>{glitchText}</div><div onClick={initGame} onTouchEnd={(e) => { e.preventDefault(); e.stopPropagation(); initGame(); }} style={{ padding: '14px 45px', fontSize: 13, border: '2px solid #fff', letterSpacing: 4, cursor: 'pointer' }}>TAP TO START</div><div style={{ fontSize: 9, color: '#888', marginTop: 30, textAlign: 'center', lineHeight: 1.8 }}>COLLECT FORTUNES • DODGE EXECUTIVES & CONTRACTS<br/>LOSE ALL COOKIES = GAME OVER</div><div style={{ position: 'absolute', bottom: 20, textAlign: 'center' }}><a href="/" onClick={(e) => e.stopPropagation()} style={{ fontSize: 9, color: '#666', textDecoration: 'none', letterSpacing: 2, display: 'inline-block', padding: '12px 20px', cursor: 'pointer' }}>VISIT FORTUNE5BILLION.COM</a><div style={{ fontSize: 8, color: '#333', marginTop: 8, letterSpacing: 1 }}>© 2026 FORTUNE5BILLION INC. All Rights Reserved.</div></div></div>);
-  if (gameState === 'dead') return (<div style={{ width: '100%', height: '100dvh', minHeight: 500, overflow: 'hidden', background: 'linear-gradient(180deg, #0a0a0a 0%, #100000 100%)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', fontFamily: 'monospace', color: '#fff', position: 'relative' }}><div style={{ fontSize: 11, color: '#600', letterSpacing: 3, marginBottom: 20 }}>BYE BYE MASTERS</div><h1 style={{ fontSize: 28, letterSpacing: 4, margin: 0, marginBottom: 15, color: '#ff4444' }}>THEY GOT YOU</h1><div style={{ fontSize: 12, color: '#666', marginBottom: 30 }}>THE INDUSTRY WINS THIS ROUND</div><div onClick={initGame} onTouchEnd={(e) => { e.preventDefault(); initGame(); }} style={{ padding: '14px 35px', fontSize: 13, border: '2px solid #fff', letterSpacing: 3, cursor: 'pointer', marginBottom: 15 }}>TAP TO TRY AGAIN</div><a href="https://ko-fi.com/fortune5billion" target="_blank" rel="noopener noreferrer" style={{ padding: '12px 25px', fontSize: 11, fontFamily: 'monospace', background: 'transparent', border: '1px solid #ff6b6b', color: '#ff6b6b', textDecoration: 'none', letterSpacing: 2, cursor: 'pointer', display: 'inline-block', boxShadow: '0 0 10px rgba(255,107,107,0.4), 0 0 20px rgba(255,107,107,0.2)', textShadow: '0 0 8px rgba(255,107,107,0.5)' }}>SUPPORT THE PRODUCER</a><div style={{ position: 'absolute', bottom: 20, textAlign: 'center' }}><a href="/" style={{ fontSize: 9, color: '#666', textDecoration: 'none', letterSpacing: 2, display: 'inline-block', padding: '12px 20px', cursor: 'pointer' }}>VISIT FORTUNE5BILLION.COM</a><div style={{ fontSize: 8, color: '#333', marginTop: 8, letterSpacing: 1 }}>© 2026 FORTUNE5BILLION INC. All Rights Reserved.</div></div></div>);
-  if (gameState === 'end') return (<div style={{ width: '100%', height: '100dvh', minHeight: 500, overflow: 'hidden', background: 'linear-gradient(180deg, #0a0a0a 0%, #151515 100%)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', fontFamily: 'monospace', color: '#fff', position: 'relative' }}><div style={{ fontSize: 14, color: '#888', marginBottom: 30 }}>YOU KEPT YOUR FORTUNE</div><h1 style={{ fontSize: 32, letterSpacing: 6, margin: 0, marginBottom: 15 }}>N.I.R.A. VOL 1</h1><div style={{ fontSize: 12, color: '#555', textAlign: 'center', lineHeight: 1.8, marginBottom: 35 }}>AN AUDITORY EXPERIENCE DESIGNED BY<br /><span style={{ color: '#fff', letterSpacing: 2 }}>FORTUNE5BILLION</span></div><a href="#" target="_blank" rel="noopener noreferrer" style={{ padding: '14px 35px', fontSize: 13, fontFamily: 'monospace', background: '#fff', color: '#000', textDecoration: 'none', letterSpacing: 3, marginBottom: 12, display: 'inline-block' }}>PRE SAVE VOL 1 NOW</a><button onClick={initGame} onTouchEnd={(e) => { e.preventDefault(); initGame(); }} style={{ padding: '10px 25px', fontSize: 11, fontFamily: 'monospace', background: 'transparent', border: '1px solid #444', color: '#444', cursor: 'pointer', letterSpacing: 2 }}>PLAY AGAIN</button><div style={{ position: 'absolute', bottom: 20, textAlign: 'center' }}><a href="/" style={{ fontSize: 9, color: '#666', textDecoration: 'none', letterSpacing: 2, display: 'inline-block', padding: '12px 20px', cursor: 'pointer' }}>VISIT FORTUNE5BILLION.COM</a><div style={{ fontSize: 8, color: '#333', marginTop: 8, letterSpacing: 1 }}>© 2026 FORTUNE5BILLION INC. All Rights Reserved.</div></div></div>);
+  if (gameState === 'start') return (<div style={{ width: '100%', height: '100dvh', minHeight: 500, overflow: 'hidden', background: 'linear-gradient(180deg, #0a0a0a 0%, #151515 100%)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', fontFamily: 'monospace', color: '#fff', position: 'relative' }}><div style={{ fontSize: 11, color: '#555', letterSpacing: 3, marginBottom: 25 }}>FORTUNE5BILLION PRESENTS</div><div style={{ position: 'relative', width: 70, height: 55, marginBottom: 25, filter: 'drop-shadow(0 0 8px rgba(255,255,255,0.8)) drop-shadow(0 0 15px rgba(200,200,255,0.6))' }}><div style={{ position: 'absolute', left: 0, width: 30, height: 45, background: 'linear-gradient(135deg, #4a4a4a 0%, #1a1a1a 30%, #000 50%, #3a3a3a 70%, #1a1a1a 100%)', borderRadius: '50% 0 0 50%', border: '2px solid #666', transform: 'rotate(-15deg)' }} /><div style={{ position: 'absolute', right: 0, width: 30, height: 45, background: 'linear-gradient(225deg, #4a4a4a 0%, #1a1a1a 30%, #000 50%, #3a3a3a 70%, #1a1a1a 100%)', borderRadius: '0 50% 50% 0', border: '2px solid #666', transform: 'rotate(15deg)' }} /><div style={{ position: 'absolute', left: 17, top: 18, width: 36, height: 10, background: '#f5f5f0', borderRadius: 2, boxShadow: '0 0 6px rgba(255,255,255,0.5)' }} /><div style={{ position: 'absolute', left: 8, top: 8, width: 10, height: 10, background: 'linear-gradient(135deg, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.3) 50%, transparent 100%)', borderRadius: '50%' }} /><div style={{ position: 'absolute', right: 12, top: 28, width: 5, height: 5, background: 'rgba(255,255,255,0.6)', borderRadius: '50%' }} /></div><h1 style={{ fontSize: 42, fontWeight: 'bold', letterSpacing: 8, margin: 0, textShadow: '0 0 25px rgba(255,255,255,0.2)' }}>N.I.R.A.</h1><div style={{ fontSize: 13, color: '#666', letterSpacing: 2, marginTop: 8, marginBottom: 35 }}>{glitchText}</div><div onClick={initGame} onTouchEnd={(e) => { e.preventDefault(); e.stopPropagation(); initGame(); }} style={{ padding: '14px 45px', fontSize: 13, border: '2px solid #fff', letterSpacing: 4, cursor: 'pointer' }}>TAP TO START</div><div style={{ fontSize: 9, color: '#888', marginTop: 30, textAlign: 'center', lineHeight: 1.8 }}>COLLECT FORTUNES • DODGE EXECUTIVES & CONTRACTS<br/>LOSE ALL COOKIES = GAME OVER</div><div style={{ position: 'absolute', bottom: 20, textAlign: 'center' }}><a href="/" onClick={(e) => e.stopPropagation()} style={{ fontSize: 9, color: '#666', textDecoration: 'none', letterSpacing: 2, display: 'inline-block', padding: '6px 20px', cursor: 'pointer' }}>VISIT FORTUNE5BILLION.COM</a><div style={{ fontSize: 8, color: '#333', marginTop: 4, letterSpacing: 1 }}>© 2026 FORTUNE5BILLION INC. All Rights Reserved.</div></div></div>);
+  if (gameState === 'dead') return (<div style={{ width: '100%', height: '100dvh', minHeight: 500, overflow: 'hidden', background: 'linear-gradient(180deg, #0a0a0a 0%, #100000 100%)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', fontFamily: 'monospace', color: '#fff', position: 'relative' }}><div style={{ fontSize: 11, color: '#600', letterSpacing: 3, marginBottom: 20 }}>BYE BYE MASTERS</div><h1 style={{ fontSize: 28, letterSpacing: 4, margin: 0, marginBottom: 15, color: '#ff4444' }}>THEY GOT YOU</h1><div style={{ fontSize: 12, color: '#666', marginBottom: 30 }}>THE INDUSTRY WINS THIS ROUND</div><div onClick={initGame} onTouchEnd={(e) => { e.preventDefault(); initGame(); }} style={{ padding: '14px 35px', fontSize: 13, border: '2px solid #fff', letterSpacing: 3, cursor: 'pointer', marginBottom: 15 }}>TAP TO TRY AGAIN</div><a href="https://ko-fi.com/fortune5billion" target="_blank" rel="noopener noreferrer" style={{ padding: '12px 25px', fontSize: 11, fontFamily: 'monospace', background: 'transparent', border: '1px solid #ff6b6b', color: '#ff6b6b', textDecoration: 'none', letterSpacing: 2, cursor: 'pointer', display: 'inline-block', boxShadow: '0 0 10px rgba(255,107,107,0.4), 0 0 20px rgba(255,107,107,0.2)', textShadow: '0 0 8px rgba(255,107,107,0.5)' }}>SUPPORT THE PRODUCER</a><div style={{ position: 'absolute', bottom: 20, textAlign: 'center' }}><a href="/" style={{ fontSize: 9, color: '#666', textDecoration: 'none', letterSpacing: 2, display: 'inline-block', padding: '6px 20px', cursor: 'pointer' }}>VISIT FORTUNE5BILLION.COM</a><div style={{ fontSize: 8, color: '#333', marginTop: 4, letterSpacing: 1 }}>© 2026 FORTUNE5BILLION INC. All Rights Reserved.</div></div></div>);
+  if (gameState === 'end') return (<div style={{ width: '100%', height: '100dvh', minHeight: 500, overflow: 'hidden', background: 'linear-gradient(180deg, #0a0a0a 0%, #151515 100%)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', fontFamily: 'monospace', color: '#fff', position: 'relative' }}><div style={{ fontSize: 14, color: '#888', marginBottom: 30 }}>YOU KEPT YOUR FORTUNE</div><h1 style={{ fontSize: 32, letterSpacing: 6, margin: 0, marginBottom: 15 }}>N.I.R.A. VOL 1</h1><div style={{ fontSize: 12, color: '#555', textAlign: 'center', lineHeight: 1.8, marginBottom: 35 }}>AN AUDITORY EXPERIENCE DESIGNED BY<br /><span style={{ color: '#fff', letterSpacing: 2 }}>FORTUNE5BILLION</span></div><a href="#" target="_blank" rel="noopener noreferrer" style={{ padding: '14px 35px', fontSize: 13, fontFamily: 'monospace', background: '#fff', color: '#000', textDecoration: 'none', letterSpacing: 3, marginBottom: 12, display: 'inline-block' }}>PRE SAVE VOL 1 NOW</a><button onClick={initGame} onTouchEnd={(e) => { e.preventDefault(); initGame(); }} style={{ padding: '10px 25px', fontSize: 11, fontFamily: 'monospace', background: 'transparent', border: '1px solid #444', color: '#444', cursor: 'pointer', letterSpacing: 2 }}>PLAY AGAIN</button><div style={{ position: 'absolute', bottom: 20, textAlign: 'center' }}><a href="/" style={{ fontSize: 9, color: '#666', textDecoration: 'none', letterSpacing: 2, display: 'inline-block', padding: '6px 20px', cursor: 'pointer' }}>VISIT FORTUNE5BILLION.COM</a><div style={{ fontSize: 8, color: '#333', marginTop: 4, letterSpacing: 1 }}>© 2026 FORTUNE5BILLION INC. All Rights Reserved.</div></div></div>);
 
   return (
     <div onClick={() => { if (frozen) return; const g = gameRef.current; if (g.playerY >= GROUND - 5 && !g.isJumping) { g.isJumping = true; g.velocity = -780; playSound(audioCtxRef.current, 'jump'); } }} style={{ width: '100%', height: '100dvh', minHeight: 500, overflow: 'hidden', background: hitFlash ? '#200000' : '#0a0a0a', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', fontFamily: 'monospace', userSelect: 'none', cursor: 'pointer', transition: 'background 0.1s', position: 'relative', paddingBottom: 60 }}>
@@ -633,7 +645,7 @@ export default function NIRAGame() {
         <Player flash={hitFlash} invincible={g.invincible} y={g.playerY} />
       </div>
       <div style={{ color: '#333', fontSize: 10, marginTop: 12, letterSpacing: 2 }}>{glitchText}</div>
-      <div style={{ position: 'absolute', bottom: 20, textAlign: 'center' }} onClick={(e) => e.stopPropagation()} onTouchStart={(e) => e.stopPropagation()} onTouchEnd={(e) => e.stopPropagation()}><a href="/" onClick={(e) => e.stopPropagation()} style={{ fontSize: 9, color: '#666', textDecoration: 'none', letterSpacing: 2, display: 'inline-block', padding: '12px 20px', cursor: 'pointer' }}>VISIT FORTUNE5BILLION.COM</a><div style={{ fontSize: 8, color: '#333', marginTop: 8, letterSpacing: 1 }}>© 2026 FORTUNE5BILLION INC. All Rights Reserved.</div></div>
+      <div style={{ position: 'absolute', bottom: 20, textAlign: 'center' }} onClick={(e) => e.stopPropagation()} onTouchStart={(e) => e.stopPropagation()} onTouchEnd={(e) => e.stopPropagation()}><a href="/" onClick={(e) => e.stopPropagation()} style={{ fontSize: 9, color: '#666', textDecoration: 'none', letterSpacing: 2, display: 'inline-block', padding: '6px 20px', cursor: 'pointer' }}>VISIT FORTUNE5BILLION.COM</a><div style={{ fontSize: 8, color: '#333', marginTop: 4, letterSpacing: 1 }}>© 2026 FORTUNE5BILLION INC. All Rights Reserved.</div></div>
     </div>
   );
 }
