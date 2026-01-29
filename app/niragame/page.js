@@ -28,6 +28,7 @@ const createMusicPlayer = () => {
       audio.addEventListener('timeupdate', () => {
         if (audio.currentTime >= LOOP_POINT) {
           audio.currentTime = 0;
+          audio.play().catch(() => {});
         }
       });
       
