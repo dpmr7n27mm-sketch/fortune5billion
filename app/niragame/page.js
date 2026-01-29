@@ -10,96 +10,46 @@ const createAudioContext = () => {
   return null;
 };
 
-// Background Music Controller with smooth crossfade looping
+// Background Music Controller - simple native loop
 const createMusicPlayer = () => {
-  let audio1 = null;
-  let audio2 = null;
-  let currentAudio = 1;
+  let audio = null;
   let isLoaded = false;
-  const TRACK_DURATION = 22; // seconds
-  const FADE_DURATION = 1.5; // crossfade duration in seconds
-  const TARGET_VOLUME = 0.4;
-  let fadeInterval = null;
-  
-  const crossfade = () => {
-    const fadeOut = currentAudio === 1 ? audio1 : audio2;
-    const fadeIn = currentAudio === 1 ? audio2 : audio1;
-    
-    fadeIn.currentTime = 0;
-    fadeIn.volume = 0;
-    fadeIn.play().catch(() => {});
-    
-    let step = 0;
-    const steps = 30;
-    const interval = (FADE_DURATION * 1000) / steps;
-    
-    if (fadeInterval) clearInterval(fadeInterval);
-    fadeInterval = setInterval(() => {
-      step++;
-      const progress = step / steps;
-      fadeOut.volume = Math.max(0, TARGET_VOLUME * (1 - progress));
-      fadeIn.volume = Math.min(TARGET_VOLUME, TARGET_VOLUME * progress);
-      
-      if (step >= steps) {
-        clearInterval(fadeInterval);
-        fadeOut.pause();
-        fadeOut.currentTime = 0;
-        currentAudio = currentAudio === 1 ? 2 : 1;
-      }
-    }, interval);
-  };
   
   return {
     load: (src) => {
-      audio1 = new Audio(src);
-      audio2 = new Audio(src);
-      audio1.volume = TARGET_VOLUME;
-      audio2.volume = 0;
+      if (audio) {
+        audio.pause();
+        audio.src = '';
+      }
+      audio = new Audio(src);
+      audio.loop = true;
+      audio.volume = 0.4;
       
-      audio1.addEventListener('timeupdate', () => {
-        if (audio1.currentTime > TRACK_DURATION - FADE_DURATION && currentAudio === 1) {
-          crossfade();
-        }
-      });
-      
-      audio2.addEventListener('timeupdate', () => {
-        if (audio2.currentTime > TRACK_DURATION - FADE_DURATION && currentAudio === 2) {
-          crossfade();
-        }
-      });
-      
-      audio1.addEventListener('canplaythrough', () => {
+      audio.addEventListener('canplaythrough', () => {
         isLoaded = true;
       });
-      audio1.load();
-      audio2.load();
+      audio.load();
     },
     play: () => {
-      if (audio1 && isLoaded) {
-        audio1.play().catch(() => {});
-      } else if (audio1) {
-        audio1.addEventListener('canplaythrough', () => {
-          audio1.play().catch(() => {});
+      if (audio && isLoaded) {
+        audio.play().catch(() => {});
+      } else if (audio) {
+        audio.addEventListener('canplaythrough', () => {
+          audio.play().catch(() => {});
         }, { once: true });
       }
     },
     pause: () => {
-      if (audio1) audio1.pause();
-      if (audio2) audio2.pause();
+      if (audio) audio.pause();
     },
     stop: () => {
-      if (fadeInterval) clearInterval(fadeInterval);
-      if (audio1) { audio1.pause(); audio1.currentTime = 0; audio1.volume = TARGET_VOLUME; }
-      if (audio2) { audio2.pause(); audio2.currentTime = 0; audio2.volume = 0; }
-      currentAudio = 1;
+      if (audio) { audio.pause(); audio.currentTime = 0; }
     },
     setVolume: (vol) => {
-      const v = Math.max(0, Math.min(1, vol));
-      if (audio1 && currentAudio === 1) audio1.volume = v;
-      if (audio2 && currentAudio === 2) audio2.volume = v;
+      if (audio) audio.volume = Math.max(0, Math.min(1, vol));
     },
     isPlaying: () => {
-      return (audio1 && !audio1.paused) || (audio2 && !audio2.paused);
+      return audio && !audio.paused;
     }
   };
 };
