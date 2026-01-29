@@ -14,7 +14,7 @@ const createAudioContext = () => {
 const createMusicPlayer = () => {
   let audio = null;
   let isLoaded = false;
-  const LOOP_POINT = 22; // Loop just before end to avoid encoder padding
+  const LOOP_POINT = 22.3; // Loop just before end to avoid encoder padding
   
   return {
     load: (src) => {
