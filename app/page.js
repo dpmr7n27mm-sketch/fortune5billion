@@ -54,7 +54,7 @@ export default function FortuneHub() {
       alignItems: 'center',
       fontFamily: 'monospace',
       color: '#fff',
-      padding: '40px 20px 80px 20px',
+      padding: '40px 20px 70px 20px',
       boxSizing: 'border-box',
       overflowX: 'hidden',
       position: 'relative',
