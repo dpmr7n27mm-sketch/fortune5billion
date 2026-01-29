@@ -15,7 +15,7 @@ const createMusicPlayer = () => {
   let audio = null;
   let isLoaded = false;
   let loopChecker = null;
-  const LOOP_POINT = 22.4;
+  const LOOP_POINT = 22.5;
   
   return {
     load: (src) => {
