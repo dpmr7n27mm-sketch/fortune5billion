@@ -55,9 +55,17 @@ const createMusicPlayer = (audioCtx) => {
       }
     },
     play: () => {
-      if (audioCtx.state === 'suspended') audioCtx.resume();
-      if (!isPlaying && isLoaded && audioBuffer) {
-        startPlayback();
+      // FIX: Ensure context is fully resumed BEFORE trying to play
+      const run = () => {
+        if (!isPlaying && isLoaded && audioBuffer) {
+          startPlayback();
+        }
+      };
+
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume().then(run).catch(run);
+      } else {
+        run();
       }
     },
     stop: () => {
