@@ -465,7 +465,7 @@ export default function NIRAGame() {
         try {
           if (!musicPlayerRef.current) {
             musicPlayerRef.current = createMusicPlayer();
-            musicPlayerRef.current.load('/nira-bgm.mp3');
+            musicPlayerRef.current.load('/nira-bgm.ogg');
           }
           musicPlayerRef.current.play();
           setMusicStarted(true);
