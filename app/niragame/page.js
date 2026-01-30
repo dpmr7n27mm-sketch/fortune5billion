@@ -10,68 +10,61 @@ const createAudioContext = () => {
   return null;
 };
 
-// REPLACED: Web Audio API Player for perfect looping
-const createMusicPlayer = (audioCtx) => {
-  let source = null;
-  let gainNode = audioCtx.createGain();
-  let audioBuffer = null;
-  let isPlaying = false;
+// Background Music Controller - precise loop timing
+const createMusicPlayer = () => {
+  let audio = null;
   let isLoaded = false;
+  let loopChecker = null;
+  const LOOP_POINT = 22.5;
   
-  // Connect to output
-  gainNode.connect(audioCtx.destination);
-  gainNode.gain.value = 0.4;
-
-  // PRECISE LOOP POINT (22.58 seconds)
-  const LOOP_POINT = 22.58; 
-
-  const startPlayback = () => {
-    // Stop any existing source to prevent overlap
-    if (source) {
-      try { source.stop(); source.disconnect(); } catch(e) {}
-    }
-
-    // Create new buffer source (Web Audio requires a new source for every play)
-    source = audioCtx.createBufferSource();
-    source.buffer = audioBuffer;
-    source.loop = true;
-    source.loopStart = 0;
-    source.loopEnd = LOOP_POINT; // Sample-accurate looping happens here
-    
-    source.connect(gainNode);
-    source.start(0);
-    isPlaying = true;
-  };
-
   return {
-    load: async (url) => {
-      try {
-        const response = await fetch(url);
-        const arrayBuffer = await response.arrayBuffer();
-        audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
-        isLoaded = true;
-      } catch (e) {
-        console.error("Audio load failed", e);
+    load: (src) => {
+      if (audio) {
+        audio.pause();
+        audio.src = '';
       }
+      if (loopChecker) clearInterval(loopChecker);
+      
+      audio = new Audio(src);
+      audio.volume = 0.4;
+      
+      audio.addEventListener('canplaythrough', () => {
+        isLoaded = true;
+      });
+      audio.load();
     },
     play: () => {
-      if (audioCtx.state === 'suspended') audioCtx.resume();
-      if (!isPlaying && isLoaded && audioBuffer) {
+      if (loopChecker) clearInterval(loopChecker);
+      
+      const startPlayback = () => {
+        audio.play().catch(() => {});
+        loopChecker = setInterval(() => {
+          if (audio && audio.currentTime >= LOOP_POINT) {
+            audio.currentTime = 0;
+          }
+        }, 16);
+      };
+      
+      if (audio && isLoaded) {
         startPlayback();
+      } else if (audio) {
+        audio.addEventListener('canplaythrough', startPlayback, { once: true });
       }
+    },
+    pause: () => {
+      if (audio) audio.pause();
+      if (loopChecker) clearInterval(loopChecker);
     },
     stop: () => {
-      if (source) {
-        try { source.stop(); source.disconnect(); } catch (e) {}
-        source = null;
-      }
-      isPlaying = false;
+      if (loopChecker) clearInterval(loopChecker);
+      if (audio) { audio.pause(); audio.currentTime = 0; }
     },
     setVolume: (vol) => {
-      gainNode.gain.cancelScheduledValues(audioCtx.currentTime);
-      gainNode.gain.setValueAtTime(Math.max(0, Math.min(1, vol)), audioCtx.currentTime);
+      if (audio) audio.volume = Math.max(0, Math.min(1, vol));
     },
-    isPlaying: () => isPlaying
+    isPlaying: () => {
+      return audio && !audio.paused;
+    }
   };
 };
 
@@ -467,21 +460,12 @@ export default function NIRAGame() {
 
   // Start music on first user interaction (required by browsers)
   useEffect(() => {
-    // Only initialize audio context once
-    if (!audioCtxRef.current) {
-        audioCtxRef.current = createAudioContext();
-    }
-
     const startMusic = () => {
-      if (!musicStarted && audioCtxRef.current) {
+      if (!musicStarted) {
         try {
           if (!musicPlayerRef.current) {
-            musicPlayerRef.current = createMusicPlayer(audioCtxRef.current);
+            musicPlayerRef.current = createMusicPlayer();
             musicPlayerRef.current.load('/nira-bgm.mp3');
-          }
-          // Resume context just in case (mobile fix)
-          if (audioCtxRef.current.state === 'suspended') {
-            audioCtxRef.current.resume();
           }
           musicPlayerRef.current.play();
           setMusicStarted(true);
@@ -496,21 +480,10 @@ export default function NIRAGame() {
     document.addEventListener('touchstart', startMusic, { once: true });
     document.addEventListener('keydown', startMusic, { once: true });
     
-    // TAB SWITCHING FIX: Resume audio when tab becomes visible
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible') {
-        if (audioCtxRef.current && audioCtxRef.current.state === 'suspended') {
-          audioCtxRef.current.resume();
-        }
-      }
-    };
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-
     return () => {
       document.removeEventListener('click', startMusic);
       document.removeEventListener('touchstart', startMusic);
       document.removeEventListener('keydown', startMusic);
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, [musicStarted]);
 
@@ -527,16 +500,11 @@ export default function NIRAGame() {
   const hitMessages = ["THEY TOOK YOUR FORTUNE", "BAD DEAL SIGNED", "READ THE FINE PRINT", "360 DEAL ACTIVATED", "LOST YOUR MASTERS", "RIGHTS GONE IN PERPETUITY", "ADVANCE TRAP", "SIGNED YOUR RIGHTS AWAY"];
 
   const initGame = useCallback(() => {
-    // Always recreate AudioContext to fix stale audio after idle (Original Logic)
+    // Always recreate AudioContext to fix stale audio after idle
     if (audioCtxRef.current) {
-      // Don't close if we want to keep music running, but original code did this.
-      // Modifying slightly to support Web Audio Player persistence
-      if (audioCtxRef.current.state === 'suspended') {
-          audioCtxRef.current.resume();
-      }
-    } else {
-        audioCtxRef.current = createAudioContext();
+      try { audioCtxRef.current.close(); } catch (e) {}
     }
+    audioCtxRef.current = createAudioContext();
     
     // Resume music if it was stopped (on death/win)
     try {
