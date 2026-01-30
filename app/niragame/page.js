@@ -10,12 +10,10 @@ const createAudioContext = () => {
   return null;
 };
 
-// Background Music Controller - precise loop timing
+// Background Music Controller - native loop
 const createMusicPlayer = () => {
   let audio = null;
   let isLoaded = false;
-  let loopChecker = null;
-  const LOOP_POINT = 22.5;
   
   return {
     load: (src) => {
@@ -23,9 +21,8 @@ const createMusicPlayer = () => {
         audio.pause();
         audio.src = '';
       }
-      if (loopChecker) clearInterval(loopChecker);
-      
       audio = new Audio(src);
+      audio.loop = true;
       audio.volume = 0.4;
       
       audio.addEventListener('canplaythrough', () => {
@@ -34,29 +31,18 @@ const createMusicPlayer = () => {
       audio.load();
     },
     play: () => {
-      if (loopChecker) clearInterval(loopChecker);
-      
-      const startPlayback = () => {
-        audio.play().catch(() => {});
-        loopChecker = setInterval(() => {
-          if (audio && audio.currentTime >= LOOP_POINT) {
-            audio.currentTime = 0;
-          }
-        }, 16);
-      };
-      
       if (audio && isLoaded) {
-        startPlayback();
+        audio.play().catch(() => {});
       } else if (audio) {
-        audio.addEventListener('canplaythrough', startPlayback, { once: true });
+        audio.addEventListener('canplaythrough', () => {
+          audio.play().catch(() => {});
+        }, { once: true });
       }
     },
     pause: () => {
       if (audio) audio.pause();
-      if (loopChecker) clearInterval(loopChecker);
     },
     stop: () => {
-      if (loopChecker) clearInterval(loopChecker);
       if (audio) { audio.pause(); audio.currentTime = 0; }
     },
     setVolume: (vol) => {
