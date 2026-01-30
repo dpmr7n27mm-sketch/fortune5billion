@@ -61,7 +61,7 @@ const createMusicPlayer = (audioCtx) => {
     },
     play: () => {
       queuedPlay = true; // Remember we want to play
-      if (audioCtx.state === 'suspended') audioCtx.resume();
+      if (audioCtx.state === 'suspended' || audioCtx.state === 'interrupted') audioCtx.resume();
       
       if (!isPlaying && isLoaded && audioBuffer) {
         startPlayback();
@@ -75,6 +75,13 @@ const createMusicPlayer = (audioCtx) => {
       }
       isPlaying = false;
     },
+    // NEW: Called when waking from dormancy to ensure audio stream is alive
+    recover: () => {
+      if (isPlaying && isLoaded && audioBuffer) {
+        // Force restart the source node
+        startPlayback();
+      }
+    },
     setVolume: (vol) => {
       gainNode.gain.cancelScheduledValues(audioCtx.currentTime);
       gainNode.gain.setValueAtTime(Math.max(0, Math.min(1, vol)), audioCtx.currentTime);
@@ -85,7 +92,7 @@ const createMusicPlayer = (audioCtx) => {
 
 const playSound = (audioCtx, type) => {
   if (!audioCtx) return;
-  if (audioCtx.state === 'suspended') audioCtx.resume();
+  if (audioCtx.state === 'suspended' || audioCtx.state === 'interrupted') audioCtx.resume();
   
   const now = audioCtx.currentTime;
   
@@ -488,7 +495,7 @@ export default function NIRAGame() {
             musicPlayerRef.current.load('/nira-bgm.mp3');
           }
           // Resume context just in case (mobile fix)
-          if (audioCtxRef.current.state === 'suspended') {
+          if (audioCtxRef.current.state === 'suspended' || audioCtxRef.current.state === 'interrupted') {
             audioCtxRef.current.resume();
           }
           musicPlayerRef.current.play();
@@ -499,16 +506,36 @@ export default function NIRAGame() {
       }
     };
     
-    // Listen for any user interaction to start music
+    // PERSISTENT UNLOCKER: Listen for touches constantly to wake up audio if suspended
+    const handleTouchUnlock = () => {
+      if (audioCtxRef.current && (audioCtxRef.current.state === 'suspended' || audioCtxRef.current.state === 'interrupted')) {
+        audioCtxRef.current.resume();
+        // If music thinks it's playing but context was dead, recover it
+        if (musicPlayerRef.current) {
+          musicPlayerRef.current.recover();
+        }
+      }
+    };
+
     document.addEventListener('click', startMusic, { once: true });
     document.addEventListener('touchstart', startMusic, { once: true });
     document.addEventListener('keydown', startMusic, { once: true });
     
-    // TAB SWITCHING FIX: Resume audio when tab becomes visible
+    // Use persistent touch listener for recovery
+    document.addEventListener('touchstart', handleTouchUnlock, { passive: true });
+    
+    // TAB SWITCHING FIX: Resume audio AND recover stream when tab becomes visible
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
-        if (audioCtxRef.current && audioCtxRef.current.state === 'suspended') {
-          audioCtxRef.current.resume();
+        const ctx = audioCtxRef.current;
+        if (ctx) {
+          if (ctx.state === 'suspended' || ctx.state === 'interrupted') {
+            ctx.resume();
+          }
+          // Force restart music if it was playing (OS might have killed the stream)
+          if (musicPlayerRef.current) {
+            musicPlayerRef.current.recover();
+          }
         }
       }
     };
@@ -518,6 +545,7 @@ export default function NIRAGame() {
       document.removeEventListener('click', startMusic);
       document.removeEventListener('touchstart', startMusic);
       document.removeEventListener('keydown', startMusic);
+      document.removeEventListener('touchstart', handleTouchUnlock);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, [musicStarted]);
@@ -539,7 +567,7 @@ export default function NIRAGame() {
     if (audioCtxRef.current) {
       // Don't close if we want to keep music running, but original code did this.
       // Modifying slightly to support Web Audio Player persistence
-      if (audioCtxRef.current.state === 'suspended') {
+      if (audioCtxRef.current.state === 'suspended' || audioCtxRef.current.state === 'interrupted') {
           audioCtxRef.current.resume();
       }
     } else {
