@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 
-// Retro-Future Sound System - Black Mirror x Far East / Early 2000s Dark Elegance
+// Retro-Future Sound System
 const createAudioContext = () => {
   if (typeof window !== 'undefined') {
     return new (window.AudioContext || window.webkitAudioContext)();
@@ -11,22 +11,19 @@ const createAudioContext = () => {
 };
 
 // HELPER: Mobile Audio Unlocker
-// iOS requires a sound to be played inside a touch event to unlock the engine
+// Unlocks audio engine on first touch without interfering with game logic
 const unlockAudioEngine = (audioCtx) => {
   if (!audioCtx || audioCtx.state === 'running') return;
-  
-  // Resume the context
   audioCtx.resume().then(() => {
-    // Play a silent buffer to force the audio hardware to wake up
     const buffer = audioCtx.createBuffer(1, 1, 22050);
     const source = audioCtx.createBufferSource();
     source.buffer = buffer;
     source.connect(audioCtx.destination);
     source.start(0);
-  }).catch(e => console.error("Audio resume failed", e));
+  }).catch(() => {});
 };
 
-// REWRITTEN: Music Player using Web Audio API for gapless looping
+// Music Player - Gapless Looping (Web Audio API)
 const createMusicPlayer = (audioCtx) => {
   let source = null;
   let gainNode = audioCtx.createGain();
@@ -34,26 +31,20 @@ const createMusicPlayer = (audioCtx) => {
   let isPlaying = false;
   let shouldPlayAfterLoad = false;
   
-  // This volume connects to the main context destination
   gainNode.connect(audioCtx.destination);
   gainNode.gain.value = 0.4;
 
-  // UPDATED: Precise loop point based on 22s 580ms
   const LOOP_POINT = 22.58; 
 
   const startSource = () => {
-    // Stop existing source if any to prevent layering
     if (source) {
       try { source.stop(); source.disconnect(); } catch(e) {}
     }
-    
-    // Create source
     source = audioCtx.createBufferSource();
     source.buffer = audioBuffer;
     source.loop = true;
     source.loopStart = 0;
     source.loopEnd = LOOP_POINT;
-    
     source.connect(gainNode);
     source.start(0);
     isPlaying = true;
@@ -62,429 +53,148 @@ const createMusicPlayer = (audioCtx) => {
   return {
     load: async (url) => {
       try {
-        // FIX: Construct absolute URL to handle blob/relative path issues in preview environments
-        // This ensures the fetch knows exactly where to look relative to the page origin
-        const absoluteUrl = new URL(url, window.location.origin).href;
-        
-        const response = await fetch(absoluteUrl);
-        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-        
+        const response = await fetch(url);
+        if (!response.ok) return; // Silent fail if file missing (prevents crash in preview)
         const arrayBuffer = await response.arrayBuffer();
         audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
-        
-        // If play() was called while we were loading, start now
-        if (shouldPlayAfterLoad) {
-          startSource();
-        }
+        if (shouldPlayAfterLoad) startSource();
       } catch (error) {
-        console.warn("Music load failed (check file path):", error);
+        // Console warn only, don't crash app
+        console.warn("Audio file missing or blocked:", error);
       }
     },
     play: () => {
       shouldPlayAfterLoad = true;
-      // Always try to resume context when play is called
-      if (audioCtx.state === 'suspended') {
-        audioCtx.resume();
-      }
-      
+      if (audioCtx.state === 'suspended') audioCtx.resume();
       if (isPlaying) return;
-      if (audioBuffer) {
-        startSource();
-      }
+      if (audioBuffer) startSource();
     },
     stop: () => {
       shouldPlayAfterLoad = false;
       if (source) {
-        try {
-          source.stop();
-          source.disconnect();
-        } catch (e) {}
+        try { source.stop(); source.disconnect(); } catch (e) {}
         source = null;
       }
       isPlaying = false;
     },
     setVolume: (vol) => {
-      const clamped = Math.max(0, Math.min(1, vol));
       gainNode.gain.cancelScheduledValues(audioCtx.currentTime);
-      gainNode.gain.setValueAtTime(clamped, audioCtx.currentTime);
+      gainNode.gain.setValueAtTime(Math.max(0, Math.min(1, vol)), audioCtx.currentTime);
     },
     isPlaying: () => isPlaying
   };
 };
 
+// Sound Effects
 const playSound = (audioCtx, type) => {
   if (!audioCtx) return;
-  // Ensure context is running (browsers suspend it by default until interaction)
   if (audioCtx.state === 'suspended') audioCtx.resume();
-  
   const now = audioCtx.currentTime;
   
   switch(type) {
     case 'jump': {
-      // Smooth digital breath - airy minor key rise
       const osc1 = audioCtx.createOscillator();
       const osc2 = audioCtx.createOscillator();
       const filter = audioCtx.createBiquadFilter();
       const gain = audioCtx.createGain();
-      
-      osc1.connect(filter);
-      osc2.connect(filter);
-      filter.connect(gain);
-      gain.connect(audioCtx.destination);
-      
-      osc1.type = 'sine';
-      osc2.type = 'sine';
-      filter.type = 'lowpass';
-      filter.frequency.setValueAtTime(1200, now);
-      filter.frequency.linearRampToValueAtTime(3000, now + 0.08);
-      filter.frequency.linearRampToValueAtTime(800, now + 0.15);
-      filter.Q.setValueAtTime(2, now);
-      
-      // Minor third interval - dark but smooth
-      osc1.frequency.setValueAtTime(330, now); // E
-      osc1.frequency.linearRampToValueAtTime(392, now + 0.08); // G (minor 3rd)
-      osc2.frequency.setValueAtTime(165, now); // E octave below
-      osc2.frequency.linearRampToValueAtTime(196, now + 0.08);
-      
-      gain.gain.setValueAtTime(0.001, now);
-      gain.gain.linearRampToValueAtTime(0.15, now + 0.008);
-      gain.gain.linearRampToValueAtTime(0.001, now + 0.15);
-      
-      osc1.start(now);
-      osc2.start(now);
-      osc1.stop(now + 0.16);
-      osc2.stop(now + 0.16);
+      osc1.connect(filter); osc2.connect(filter); filter.connect(gain); gain.connect(audioCtx.destination);
+      osc1.type = 'sine'; osc2.type = 'sine'; filter.type = 'lowpass';
+      filter.frequency.setValueAtTime(1200, now); filter.frequency.linearRampToValueAtTime(3000, now + 0.08); filter.frequency.linearRampToValueAtTime(800, now + 0.15); filter.Q.setValueAtTime(2, now);
+      osc1.frequency.setValueAtTime(330, now); osc1.frequency.linearRampToValueAtTime(392, now + 0.08);
+      osc2.frequency.setValueAtTime(165, now); osc2.frequency.linearRampToValueAtTime(196, now + 0.08);
+      gain.gain.setValueAtTime(0.001, now); gain.gain.linearRampToValueAtTime(0.15, now + 0.008); gain.gain.linearRampToValueAtTime(0.001, now + 0.15);
+      osc1.start(now); osc2.start(now); osc1.stop(now + 0.16); osc2.stop(now + 0.16);
       break;
     }
     case 'collect': {
-      // Smooth gem collect - warm, round, Power Stone style with subtle reverb
-      const osc1 = audioCtx.createOscillator();
-      const osc2 = audioCtx.createOscillator();
-      const filter = audioCtx.createBiquadFilter();
-      const gain = audioCtx.createGain();
-      
-      // Reverb using short delays
-      const delay1 = audioCtx.createDelay();
-      const delay2 = audioCtx.createDelay();
-      const reverbGain1 = audioCtx.createGain();
-      const reverbGain2 = audioCtx.createGain();
-      const reverbFilter = audioCtx.createBiquadFilter();
-      
-      osc1.connect(filter);
-      osc2.connect(filter);
-      filter.connect(gain);
-      gain.connect(audioCtx.destination);
-      
-      // Reverb path
-      filter.connect(reverbFilter);
-      reverbFilter.connect(delay1);
-      reverbFilter.connect(delay2);
-      delay1.connect(reverbGain1);
-      delay2.connect(reverbGain2);
-      reverbGain1.connect(audioCtx.destination);
-      reverbGain2.connect(audioCtx.destination);
-      
-      delay1.delayTime.setValueAtTime(0.03, now);
-      delay2.delayTime.setValueAtTime(0.06, now);
-      
-      // Fade reverb out smoothly to prevent click
-      reverbGain1.gain.setValueAtTime(0.04, now);
-      reverbGain1.gain.linearRampToValueAtTime(0.0001, now + 0.30);
-      reverbGain2.gain.setValueAtTime(0.025, now);
-      reverbGain2.gain.linearRampToValueAtTime(0.0001, now + 0.30);
-      
-      reverbFilter.type = 'lowpass';
-      reverbFilter.frequency.setValueAtTime(2000, now);
-      
-      osc1.type = 'sine';
-      osc2.type = 'sine';
-      filter.type = 'lowpass';
-      filter.frequency.setValueAtTime(1800, now);
-      filter.frequency.linearRampToValueAtTime(600, now + 0.2);
-      filter.Q.setValueAtTime(1, now);
-      
-      // Soft perfect 5th - warm and satisfying
-      osc1.frequency.setValueAtTime(440, now); // A
-      osc1.frequency.linearRampToValueAtTime(435, now + 0.2); // Gentle settle
-      osc2.frequency.setValueAtTime(660, now); // E (perfect 5th)
-      osc2.frequency.linearRampToValueAtTime(652, now + 0.2);
-      
-      // Soft attack, smooth decay
-      gain.gain.setValueAtTime(0.0001, now);
-      gain.gain.linearRampToValueAtTime(0.10, now + 0.015);
-      gain.gain.linearRampToValueAtTime(0.0001, now + 0.26);
-      
-      osc1.start(now);
-      osc2.start(now);
-      osc1.stop(now + 0.35);
-      osc2.stop(now + 0.35);
+      const osc1 = audioCtx.createOscillator(); const osc2 = audioCtx.createOscillator(); const filter = audioCtx.createBiquadFilter(); const gain = audioCtx.createGain();
+      const delay1 = audioCtx.createDelay(); const delay2 = audioCtx.createDelay(); const reverbGain1 = audioCtx.createGain(); const reverbGain2 = audioCtx.createGain(); const reverbFilter = audioCtx.createBiquadFilter();
+      osc1.connect(filter); osc2.connect(filter); filter.connect(gain); gain.connect(audioCtx.destination);
+      filter.connect(reverbFilter); reverbFilter.connect(delay1); reverbFilter.connect(delay2); delay1.connect(reverbGain1); delay2.connect(reverbGain2); reverbGain1.connect(audioCtx.destination); reverbGain2.connect(audioCtx.destination);
+      delay1.delayTime.setValueAtTime(0.03, now); delay2.delayTime.setValueAtTime(0.06, now);
+      reverbGain1.gain.setValueAtTime(0.04, now); reverbGain1.gain.linearRampToValueAtTime(0.0001, now + 0.30);
+      reverbGain2.gain.setValueAtTime(0.025, now); reverbGain2.gain.linearRampToValueAtTime(0.0001, now + 0.30);
+      reverbFilter.type = 'lowpass'; reverbFilter.frequency.setValueAtTime(2000, now);
+      osc1.type = 'sine'; osc2.type = 'sine'; filter.type = 'lowpass'; filter.frequency.setValueAtTime(1800, now); filter.frequency.linearRampToValueAtTime(600, now + 0.2); filter.Q.setValueAtTime(1, now);
+      osc1.frequency.setValueAtTime(440, now); osc1.frequency.linearRampToValueAtTime(435, now + 0.2);
+      osc2.frequency.setValueAtTime(660, now); osc2.frequency.linearRampToValueAtTime(652, now + 0.2);
+      gain.gain.setValueAtTime(0.0001, now); gain.gain.linearRampToValueAtTime(0.10, now + 0.015); gain.gain.linearRampToValueAtTime(0.0001, now + 0.26);
+      osc1.start(now); osc2.start(now); osc1.stop(now + 0.35); osc2.stop(now + 0.35);
       break;
     }
     case 'diamond': {
-      // Ethereal bell cluster - harmonic minor, beautiful but unsettling
-      const notes = [330, 392, 466]; // E, G, Bb (diminished feel)
-      
+      const notes = [330, 392, 466];
       notes.forEach((freq, i) => {
-        const osc = audioCtx.createOscillator();
-        const mod = audioCtx.createOscillator();
-        const modGain = audioCtx.createGain();
-        const filter = audioCtx.createBiquadFilter();
-        const gain = audioCtx.createGain();
-        
-        mod.connect(modGain);
-        modGain.connect(osc.frequency);
-        osc.connect(filter);
-        filter.connect(gain);
-        gain.connect(audioCtx.destination);
-        
-        osc.type = 'sine';
-        mod.type = 'sine';
-        filter.type = 'lowpass';
-        filter.frequency.setValueAtTime(3000, now);
-        filter.frequency.linearRampToValueAtTime(800, now + 0.6);
-        
+        const osc = audioCtx.createOscillator(); const mod = audioCtx.createOscillator(); const modGain = audioCtx.createGain(); const filter = audioCtx.createBiquadFilter(); const gain = audioCtx.createGain();
+        mod.connect(modGain); modGain.connect(osc.frequency); osc.connect(filter); filter.connect(gain); gain.connect(audioCtx.destination);
+        osc.type = 'sine'; mod.type = 'sine'; filter.type = 'lowpass'; filter.frequency.setValueAtTime(3000, now); filter.frequency.linearRampToValueAtTime(800, now + 0.6);
         const delay = i * 0.08;
-        osc.frequency.setValueAtTime(freq, now + delay);
-        mod.frequency.setValueAtTime(freq * 2.4, now + delay);
-        modGain.gain.setValueAtTime(150, now + delay);
-        modGain.gain.linearRampToValueAtTime(10, now + delay + 0.5);
-        
-        gain.gain.setValueAtTime(0.001, now + delay);
-        gain.gain.linearRampToValueAtTime(0.12, now + delay + 0.01);
-        gain.gain.linearRampToValueAtTime(0.001, now + delay + 0.6);
-        
-        osc.start(now + delay);
-        mod.start(now + delay);
-        osc.stop(now + delay + 0.62);
-        mod.stop(now + delay + 0.62);
+        osc.frequency.setValueAtTime(freq, now + delay); mod.frequency.setValueAtTime(freq * 2.4, now + delay);
+        modGain.gain.setValueAtTime(150, now + delay); modGain.gain.linearRampToValueAtTime(10, now + delay + 0.5);
+        gain.gain.setValueAtTime(0.001, now + delay); gain.gain.linearRampToValueAtTime(0.12, now + delay + 0.01); gain.gain.linearRampToValueAtTime(0.001, now + delay + 0.6);
+        osc.start(now + delay); mod.start(now + delay); osc.stop(now + delay + 0.62); mod.stop(now + delay + 0.62);
       });
-      
-      // Deep sub pulse
-      const sub = audioCtx.createOscillator();
-      const subFilter = audioCtx.createBiquadFilter();
-      const subGain = audioCtx.createGain();
-      sub.connect(subFilter);
-      subFilter.connect(subGain);
-      subGain.connect(audioCtx.destination);
-      sub.type = 'sine';
-      subFilter.type = 'lowpass';
-      subFilter.frequency.setValueAtTime(100, now);
-      sub.frequency.setValueAtTime(55, now); // Low A
-      subGain.gain.setValueAtTime(0.001, now);
-      subGain.gain.linearRampToValueAtTime(0.2, now + 0.01);
-      subGain.gain.linearRampToValueAtTime(0.001, now + 0.5);
-      sub.start(now);
-      sub.stop(now + 0.52);
+      const sub = audioCtx.createOscillator(); const subFilter = audioCtx.createBiquadFilter(); const subGain = audioCtx.createGain();
+      sub.connect(subFilter); subFilter.connect(subGain); subGain.connect(audioCtx.destination);
+      sub.type = 'sine'; subFilter.type = 'lowpass'; subFilter.frequency.setValueAtTime(100, now);
+      sub.frequency.setValueAtTime(55, now); subGain.gain.setValueAtTime(0.001, now); subGain.gain.linearRampToValueAtTime(0.2, now + 0.01); subGain.gain.linearRampToValueAtTime(0.001, now + 0.5);
+      sub.start(now); sub.stop(now + 0.52);
       break;
     }
     case 'hit': {
-      // Muted digital impact - smooth but unsettling
-      const osc = audioCtx.createOscillator();
-      const mod = audioCtx.createOscillator();
-      const modGain = audioCtx.createGain();
-      const filter = audioCtx.createBiquadFilter();
-      const gain = audioCtx.createGain();
-      
-      mod.connect(modGain);
-      modGain.connect(osc.frequency);
-      osc.connect(filter);
-      filter.connect(gain);
-      gain.connect(audioCtx.destination);
-      
-      osc.type = 'sine';
-      mod.type = 'sine';
-      filter.type = 'lowpass';
-      filter.frequency.setValueAtTime(2000, now);
-      filter.frequency.linearRampToValueAtTime(200, now + 0.15);
-      filter.Q.setValueAtTime(3, now);
-      
-      osc.frequency.setValueAtTime(150, now);
-      osc.frequency.linearRampToValueAtTime(60, now + 0.12);
-      mod.frequency.setValueAtTime(75, now);
-      modGain.gain.setValueAtTime(80, now);
-      modGain.gain.linearRampToValueAtTime(10, now + 0.1);
-      
-      gain.gain.setValueAtTime(0.001, now);
-      gain.gain.linearRampToValueAtTime(0.25, now + 0.005);
-      gain.gain.linearRampToValueAtTime(0.001, now + 0.18);
-      
-      // Subtle high frequency glitch
-      const glitch = audioCtx.createOscillator();
-      const glitchGain = audioCtx.createGain();
-      glitch.connect(glitchGain);
-      glitchGain.connect(audioCtx.destination);
-      glitch.type = 'sine';
-      glitch.frequency.setValueAtTime(2200, now);
-      glitch.frequency.linearRampToValueAtTime(800, now + 0.04);
-      glitchGain.gain.setValueAtTime(0.001, now);
-      glitchGain.gain.linearRampToValueAtTime(0.08, now + 0.003);
-      glitchGain.gain.linearRampToValueAtTime(0.001, now + 0.04);
-      
-      osc.start(now);
-      mod.start(now);
-      glitch.start(now);
-      osc.stop(now + 0.2);
-      mod.stop(now + 0.2);
-      glitch.stop(now + 0.05);
+      const osc = audioCtx.createOscillator(); const mod = audioCtx.createOscillator(); const modGain = audioCtx.createGain(); const filter = audioCtx.createBiquadFilter(); const gain = audioCtx.createGain();
+      mod.connect(modGain); modGain.connect(osc.frequency); osc.connect(filter); filter.connect(gain); gain.connect(audioCtx.destination);
+      osc.type = 'sine'; mod.type = 'sine'; filter.type = 'lowpass'; filter.frequency.setValueAtTime(2000, now); filter.frequency.linearRampToValueAtTime(200, now + 0.15); filter.Q.setValueAtTime(3, now);
+      osc.frequency.setValueAtTime(150, now); osc.frequency.linearRampToValueAtTime(60, now + 0.12);
+      mod.frequency.setValueAtTime(75, now); modGain.gain.setValueAtTime(80, now); modGain.gain.linearRampToValueAtTime(10, now + 0.1);
+      gain.gain.setValueAtTime(0.001, now); gain.gain.linearRampToValueAtTime(0.25, now + 0.005); gain.gain.linearRampToValueAtTime(0.001, now + 0.18);
+      const glitch = audioCtx.createOscillator(); const glitchGain = audioCtx.createGain(); glitch.connect(glitchGain); glitchGain.connect(audioCtx.destination);
+      glitch.type = 'sine'; glitch.frequency.setValueAtTime(2200, now); glitch.frequency.linearRampToValueAtTime(800, now + 0.04);
+      glitchGain.gain.setValueAtTime(0.001, now); glitchGain.gain.linearRampToValueAtTime(0.08, now + 0.003); glitchGain.gain.linearRampToValueAtTime(0.001, now + 0.04);
+      osc.start(now); mod.start(now); glitch.start(now); osc.stop(now + 0.2); mod.stop(now + 0.2); glitch.stop(now + 0.05);
       break;
     }
     case 'debtPit': {
-      // Dread swell - beautiful but ominous, like distant warning
-      const osc1 = audioCtx.createOscillator();
-      const osc2 = audioCtx.createOscillator();
-      const osc3 = audioCtx.createOscillator();
-      const filter = audioCtx.createBiquadFilter();
-      const gain = audioCtx.createGain();
-      
-      osc1.connect(filter);
-      osc2.connect(filter);
-      osc3.connect(filter);
-      filter.connect(gain);
-      gain.connect(audioCtx.destination);
-      
-      osc1.type = 'sine';
-      osc2.type = 'sine';
-      osc3.type = 'sine';
-      filter.type = 'lowpass';
-      filter.frequency.setValueAtTime(400, now);
-      filter.frequency.linearRampToValueAtTime(1200, now + 0.2);
-      filter.frequency.linearRampToValueAtTime(300, now + 0.5);
-      filter.Q.setValueAtTime(2, now);
-      
-      // Minor 2nd cluster - tension
-      osc1.frequency.setValueAtTime(110, now); // A
-      osc2.frequency.setValueAtTime(117, now); // Bb (minor 2nd - dissonance)
-      osc3.frequency.setValueAtTime(55, now);  // Sub A
-      
-      // Slow swell then fade
-      gain.gain.setValueAtTime(0.001, now);
-      gain.gain.linearRampToValueAtTime(0.2, now + 0.15);
-      gain.gain.linearRampToValueAtTime(0.001, now + 0.5);
-      
-      osc1.start(now);
-      osc2.start(now);
-      osc3.start(now);
-      osc1.stop(now + 0.52);
-      osc2.stop(now + 0.52);
-      osc3.stop(now + 0.52);
+      const osc1 = audioCtx.createOscillator(); const osc2 = audioCtx.createOscillator(); const osc3 = audioCtx.createOscillator(); const filter = audioCtx.createBiquadFilter(); const gain = audioCtx.createGain();
+      osc1.connect(filter); osc2.connect(filter); osc3.connect(filter); filter.connect(gain); gain.connect(audioCtx.destination);
+      osc1.type = 'sine'; osc2.type = 'sine'; osc3.type = 'sine'; filter.type = 'lowpass'; filter.frequency.setValueAtTime(400, now); filter.frequency.linearRampToValueAtTime(1200, now + 0.2); filter.frequency.linearRampToValueAtTime(300, now + 0.5); filter.Q.setValueAtTime(2, now);
+      osc1.frequency.setValueAtTime(110, now); osc2.frequency.setValueAtTime(117, now); osc3.frequency.setValueAtTime(55, now);
+      gain.gain.setValueAtTime(0.001, now); gain.gain.linearRampToValueAtTime(0.2, now + 0.15); gain.gain.linearRampToValueAtTime(0.001, now + 0.5);
+      osc1.start(now); osc2.start(now); osc3.start(now); osc1.stop(now + 0.52); osc2.stop(now + 0.52); osc3.stop(now + 0.52);
       break;
     }
     case 'death': {
-      // Melancholic descent - smooth, sad, inevitable
-      const minorScale = [494, 440, 392, 330]; // B A G E (natural minor descent)
-      
+      const minorScale = [494, 440, 392, 330];
       minorScale.forEach((freq, i) => {
-        const osc = audioCtx.createOscillator();
-        const osc2 = audioCtx.createOscillator();
-        const filter = audioCtx.createBiquadFilter();
-        const gain = audioCtx.createGain();
-        
-        osc.connect(filter);
-        osc2.connect(filter);
-        filter.connect(gain);
-        gain.connect(audioCtx.destination);
-        
-        osc.type = 'sine';
-        osc2.type = 'sine';
-        filter.type = 'lowpass';
-        
+        const osc = audioCtx.createOscillator(); const osc2 = audioCtx.createOscillator(); const filter = audioCtx.createBiquadFilter(); const gain = audioCtx.createGain();
+        osc.connect(filter); osc2.connect(filter); filter.connect(gain); gain.connect(audioCtx.destination);
+        osc.type = 'sine'; osc2.type = 'sine'; filter.type = 'lowpass';
         const delay = i * 0.15;
-        filter.frequency.setValueAtTime(2000, now + delay);
-        filter.frequency.linearRampToValueAtTime(600, now + delay + 0.18);
-        
-        osc.frequency.setValueAtTime(freq, now + delay);
-        osc.frequency.linearRampToValueAtTime(freq * 0.98, now + delay + 0.15); // Slight pitch drop
-        osc2.frequency.setValueAtTime(freq * 0.5, now + delay); // Octave below
-        
-        gain.gain.setValueAtTime(0.001, now + delay);
-        gain.gain.linearRampToValueAtTime(0.15 - (i * 0.02), now + delay + 0.01);
-        gain.gain.linearRampToValueAtTime(0.001, now + delay + 0.2);
-        
-        osc.start(now + delay);
-        osc2.start(now + delay);
-        osc.stop(now + delay + 0.22);
-        osc2.stop(now + delay + 0.22);
+        filter.frequency.setValueAtTime(2000, now + delay); filter.frequency.linearRampToValueAtTime(600, now + delay + 0.18);
+        osc.frequency.setValueAtTime(freq, now + delay); osc.frequency.linearRampToValueAtTime(freq * 0.98, now + delay + 0.15);
+        osc2.frequency.setValueAtTime(freq * 0.5, now + delay);
+        gain.gain.setValueAtTime(0.001, now + delay); gain.gain.linearRampToValueAtTime(0.15 - (i * 0.02), now + delay + 0.01); gain.gain.linearRampToValueAtTime(0.001, now + delay + 0.2);
+        osc.start(now + delay); osc2.start(now + delay); osc.stop(now + delay + 0.22); osc2.stop(now + delay + 0.22);
       });
       break;
     }
     case 'win': {
-      // Bittersweet resolution - beautiful but melancholic victory
-      const progression = [
-        { freq: 330, time: 0 },      // E
-        { freq: 392, time: 0.12 },   // G
-        { freq: 494, time: 0.24 },   // B
-        { freq: 659, time: 0.4 },    // E (octave)
-      ];
-      
+      const progression = [{ freq: 330, time: 0 }, { freq: 392, time: 0.12 }, { freq: 494, time: 0.24 }, { freq: 659, time: 0.4 }];
       progression.forEach(({ freq, time }) => {
-        const osc = audioCtx.createOscillator();
-        const osc2 = audioCtx.createOscillator();
-        const mod = audioCtx.createOscillator();
-        const modGain = audioCtx.createGain();
-        const filter = audioCtx.createBiquadFilter();
-        const gain = audioCtx.createGain();
-        
-        mod.connect(modGain);
-        modGain.connect(osc.frequency);
-        osc.connect(filter);
-        osc2.connect(filter);
-        filter.connect(gain);
-        gain.connect(audioCtx.destination);
-        
-        osc.type = 'sine';
-        osc2.type = 'sine';
-        mod.type = 'sine';
-        filter.type = 'lowpass';
-        filter.frequency.setValueAtTime(3500, now + time);
-        filter.frequency.linearRampToValueAtTime(1200, now + time + 0.25);
-        
-        osc.frequency.setValueAtTime(freq, now + time);
-        osc2.frequency.setValueAtTime(freq * 0.5, now + time);
-        mod.frequency.setValueAtTime(freq * 2.5, now + time);
-        modGain.gain.setValueAtTime(100, now + time);
-        modGain.gain.linearRampToValueAtTime(10, now + time + 0.2);
-        
-        gain.gain.setValueAtTime(0.001, now + time);
-        gain.gain.linearRampToValueAtTime(0.14, now + time + 0.01);
-        gain.gain.linearRampToValueAtTime(0.001, now + time + 0.3);
-        
-        osc.start(now + time);
-        osc2.start(now + time);
-        mod.start(now + time);
-        osc.stop(now + time + 0.32);
-        osc2.stop(now + time + 0.32);
-        mod.stop(now + time + 0.32);
+        const osc = audioCtx.createOscillator(); const osc2 = audioCtx.createOscillator(); const mod = audioCtx.createOscillator(); const modGain = audioCtx.createGain(); const filter = audioCtx.createBiquadFilter(); const gain = audioCtx.createGain();
+        mod.connect(modGain); modGain.connect(osc.frequency); osc.connect(filter); osc2.connect(filter); filter.connect(gain); gain.connect(audioCtx.destination);
+        osc.type = 'sine'; osc2.type = 'sine'; mod.type = 'sine'; filter.type = 'lowpass'; filter.frequency.setValueAtTime(3500, now + time); filter.frequency.linearRampToValueAtTime(1200, now + time + 0.25);
+        osc.frequency.setValueAtTime(freq, now + time); osc2.frequency.setValueAtTime(freq * 0.5, now + time); mod.frequency.setValueAtTime(freq * 2.5, now + time);
+        modGain.gain.setValueAtTime(100, now + time); modGain.gain.linearRampToValueAtTime(10, now + time + 0.2);
+        gain.gain.setValueAtTime(0.001, now + time); gain.gain.linearRampToValueAtTime(0.14, now + time + 0.01); gain.gain.linearRampToValueAtTime(0.001, now + time + 0.3);
+        osc.start(now + time); osc2.start(now + time); mod.start(now + time); osc.stop(now + time + 0.32); osc2.stop(now + time + 0.32); mod.stop(now + time + 0.32);
       });
-      
-      // Final ethereal pad swell
-      const pad1 = audioCtx.createOscillator();
-      const pad2 = audioCtx.createOscillator();
-      const padFilter = audioCtx.createBiquadFilter();
-      const padGain = audioCtx.createGain();
-      
-      pad1.connect(padFilter);
-      pad2.connect(padFilter);
-      padFilter.connect(padGain);
-      padGain.connect(audioCtx.destination);
-      
-      pad1.type = 'sine';
-      pad2.type = 'sine';
-      padFilter.type = 'lowpass';
-      padFilter.frequency.setValueAtTime(800, now + 0.5);
-      padFilter.frequency.linearRampToValueAtTime(2000, now + 0.8);
-      padFilter.frequency.linearRampToValueAtTime(600, now + 1.2);
-      
-      pad1.frequency.setValueAtTime(330, now + 0.5); // E
-      pad2.frequency.setValueAtTime(494, now + 0.5); // B (perfect 5th - open, haunting)
-      
-      padGain.gain.setValueAtTime(0.001, now + 0.5);
-      padGain.gain.linearRampToValueAtTime(0.12, now + 0.8);
-      padGain.gain.linearRampToValueAtTime(0.001, now + 1.3);
-      
-      pad1.start(now + 0.5);
-      pad2.start(now + 0.5);
-      pad1.stop(now + 1.32);
-      pad2.stop(now + 1.32);
+      const pad1 = audioCtx.createOscillator(); const pad2 = audioCtx.createOscillator(); const padFilter = audioCtx.createBiquadFilter(); const padGain = audioCtx.createGain();
+      pad1.connect(padFilter); pad2.connect(padFilter); padFilter.connect(padGain); padGain.connect(audioCtx.destination);
+      pad1.type = 'sine'; pad2.type = 'sine'; padFilter.type = 'lowpass'; padFilter.frequency.setValueAtTime(800, now + 0.5); padFilter.frequency.linearRampToValueAtTime(2000, now + 0.8); padFilter.frequency.linearRampToValueAtTime(600, now + 1.2);
+      pad1.frequency.setValueAtTime(330, now + 0.5); pad2.frequency.setValueAtTime(494, now + 0.5);
+      padGain.gain.setValueAtTime(0.001, now + 0.5); padGain.gain.linearRampToValueAtTime(0.12, now + 0.8); padGain.gain.linearRampToValueAtTime(0.001, now + 1.3);
+      pad1.start(now + 0.5); pad2.start(now + 0.5); pad1.stop(now + 1.32); pad2.stop(now + 1.32);
       break;
     }
   }
@@ -503,56 +213,30 @@ export default function NIRAGame() {
   const [glitchBurst, setGlitchBurst] = useState(false);
   const [frozen, setFrozen] = useState(false);
 
-  // Initialize Audio Context and Pre-load Music
+  // Initialize Audio
   useEffect(() => {
     if (!audioCtxRef.current) {
         audioCtxRef.current = createAudioContext();
-        // Load music immediately so it's ready for tap
         musicPlayerRef.current = createMusicPlayer(audioCtxRef.current);
         musicPlayerRef.current.load('/nira-bgm.mp3');
     }
-    
-    // Resume audio context when tab becomes visible again
     const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible') {
-        if (audioCtxRef.current && audioCtxRef.current.state === 'suspended') {
-          audioCtxRef.current.resume();
-        }
+      if (document.visibilityState === 'visible' && audioCtxRef.current?.state === 'suspended') {
+        audioCtxRef.current.resume();
       }
     };
-    
     document.addEventListener('visibilitychange', handleVisibilityChange);
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
   }, []);
 
-  // GLOBAL AUDIO UNLOCKER
-  // This listens for the very first interaction anywhere on the document
-  // and forces the audio engine to wake up.
+  // Unlock audio engine on global interactions (once)
   useEffect(() => {
     const handleUnlock = () => {
-      if (audioCtxRef.current) {
-        unlockAudioEngine(audioCtxRef.current);
-        if (musicPlayerRef.current && !musicStarted) {
-          // If we haven't started music yet, we might want to ensure it's ready
-          // But we typically wait for the explicit game start
-        }
-      }
-      // Remove listeners immediately after first interaction
-      ['touchstart', 'click', 'keydown'].forEach(evt => 
-        document.removeEventListener(evt, handleUnlock)
-      );
+      if (audioCtxRef.current) unlockAudioEngine(audioCtxRef.current);
     };
-
-    ['touchstart', 'click', 'keydown'].forEach(evt => 
-      document.addEventListener(evt, handleUnlock, { once: true })
-    );
-
-    return () => {
-      ['touchstart', 'click', 'keydown'].forEach(evt => 
-        document.removeEventListener(evt, handleUnlock)
-      );
-    };
-  }, [musicStarted]);
+    ['touchstart', 'click', 'keydown'].forEach(evt => document.addEventListener(evt, handleUnlock, { once: true }));
+    return () => ['touchstart', 'click', 'keydown'].forEach(evt => document.removeEventListener(evt, handleUnlock));
+  }, []);
 
   const gameRef = useRef({
     playerY: 280, velocity: 0, distance: 0, collected: 0, isJumping: false, invincible: false,
@@ -567,11 +251,13 @@ export default function NIRAGame() {
   const hitMessages = ["THEY TOOK YOUR FORTUNE", "BAD DEAL SIGNED", "READ THE FINE PRINT", "360 DEAL ACTIVATED", "LOST YOUR MASTERS", "RIGHTS GONE IN PERPETUITY", "ADVANCE TRAP", "SIGNED YOUR RIGHTS AWAY"];
 
   const initGame = useCallback((e) => {
-    // Mobile Fix: Prevent default only if necessary, but allow propagation
-    // for global audio unlockers if they haven't fired yet.
-    if (e && e.cancelable) e.preventDefault(); 
+    // Prevent event propagation to avoid instant jump
+    if (e) {
+      e.stopPropagation();
+      e.preventDefault();
+    }
     
-    // Explicitly resume on button press
+    // Explicitly start music if loaded
     if (audioCtxRef.current) {
       unlockAudioEngine(audioCtxRef.current);
       if (musicPlayerRef.current) musicPlayerRef.current.play();
@@ -585,23 +271,25 @@ export default function NIRAGame() {
 
   useEffect(() => {
     const handleKeyDown = (e) => {
-      if (e.code === 'KeyR' && gameState === 'playing') { initGame(); return; }
+      if (e.code === 'KeyR' && gameState === 'playing') { initGame(e); return; }
       if (e.code === 'Space') {
         e.preventDefault();
-        if (gameState === 'start' || gameState === 'dead' || gameState === 'end') return; // Use buttons instead
+        if (gameState === 'start' || gameState === 'dead' || gameState === 'end') return;
         if (frozen) return;
         const g = gameRef.current;
         if (g.playerY >= GROUND - 5 && !g.isJumping) { g.isJumping = true; g.velocity = -780; playSound(audioCtxRef.current, 'jump'); }
       }
     };
     const handleTouch = (e) => {
-      // Don't auto-start on any screen - use buttons instead
-      if (gameState === 'start' || gameState === 'dead' || gameState === 'end') return;
-      if (frozen) return;
+      // Game Controls Touch Listener (only active when playing)
+      if (gameState !== 'playing' || frozen) return;
+      // We don't prevent default here to allow scrolling if needed, but for game we might want to
       const g = gameRef.current;
       if (g.playerY >= GROUND - 5 && !g.isJumping) { g.isJumping = true; g.velocity = -720; playSound(audioCtxRef.current, 'jump'); }
     };
+    
     window.addEventListener('keydown', handleKeyDown);
+    // Use passive false to allow preventing default if we wanted to lock scroll, but passive true is better for performance
     window.addEventListener('touchstart', handleTouch, { passive: true });
     return () => { window.removeEventListener('keydown', handleKeyDown); window.removeEventListener('touchstart', handleTouch); };
   }, [gameState, initGame, frozen]);
@@ -614,9 +302,7 @@ export default function NIRAGame() {
       if (g.invincible) return false;
       if (g.collected <= 0) { 
         try { if (musicPlayerRef.current) musicPlayerRef.current.stop(); } catch (e) {}
-        playSound(audioCtxRef.current, 'death'); 
-        setGameState('dead'); 
-        return true; 
+        playSound(audioCtxRef.current, 'death'); setGameState('dead'); return true; 
       }
       g.collected = Math.max(0, g.collected - 3); g.invincible = true; setHitFlash(true); setMessageColor('#ff4444');
       playSound(audioCtxRef.current, 'hit');
@@ -649,11 +335,9 @@ export default function NIRAGame() {
       g.executives.forEach(ex => { if (g.invincible) return; const sx = ex.x - g.distance; if (sx > -60 && sx < 150 && Math.abs(sx - 80) < 48 && (GROUND - g.playerY) < 65) { triggerHit(); }});
       g.pits.forEach(pit => { const pitLeft = pit.x - g.distance, pitRight = pitLeft + 70; if (128 > pitLeft && 80 < pitRight && g.playerY > GROUND - 60 && !g.invincible) { if (g.collected <= 0) { try { if (musicPlayerRef.current) musicPlayerRef.current.stop(); } catch (e) {} playSound(audioCtxRef.current, 'death'); setGameState('dead'); return; } g.collected = 0; g.invincible = true; setHitFlash(true); setMessageColor('#ff4444'); playSound(audioCtxRef.current, 'debtPit'); setShowMessage("DEBT TRAP"); setTimeout(() => { if (running) setShowMessage(''); }, 1200); setTimeout(() => { if (running) setHitFlash(false); }, 200); setTimeout(() => { g.invincible = false; }, 800); }});
       if (g.collected >= GOAL && !glitchBurst) { 
-        setFrozen(true);
-        setGlitchBurst(true);
+        setFrozen(true); setGlitchBurst(true);
         try { if (musicPlayerRef.current) musicPlayerRef.current.stop(); } catch (e) {}
-        playSound(audioCtxRef.current, 'win');
-        setTimeout(() => setGameState('end'), 1500); 
+        playSound(audioCtxRef.current, 'win'); setTimeout(() => setGameState('end'), 1500); 
         return; 
       }
       forceRender(n => n + 1); animId = requestAnimationFrame(loop);
@@ -675,9 +359,9 @@ export default function NIRAGame() {
   const Executive = ({ screenX }) => (<div style={{ position: 'absolute', left: Math.round(screenX), top: GROUND - 72, transform: 'translateZ(0)' }}><svg width="56" height="72" viewBox="0 0 14 18" shapeRendering="crispEdges"><rect x="4" y="0" width="6" height="1" fill="#2d2d2d"/><rect x="3" y="1" width="8" height="2" fill="#2d2d2d"/><rect x="4" y="3" width="6" height="1" fill="#f5ddd0"/><rect x="3" y="4" width="8" height="3" fill="#f5ddd0"/><rect x="5" y="7" width="4" height="1" fill="#f5ddd0"/><rect x="2" y="8" width="10" height="5" fill="#1a1a1a"/><rect x="5" y="8" width="1" height="1" fill="#ffffff"/><rect x="8" y="8" width="1" height="1" fill="#ffffff"/><rect x="6" y="8" width="2" height="4" fill="#dc2626"/><rect x="0" y="9" width="2" height="3" fill="#1a1a1a"/><rect x="0" y="12" width="2" height="1" fill="#f5ddd0"/><rect x="12" y="9" width="2" height="3" fill="#1a1a1a"/><rect x="12" y="12" width="2" height="1" fill="#f5ddd0"/><rect x="3" y="13" width="8" height="1" fill="#1f1f1f"/><rect x="3" y="14" width="3" height="3" fill="#1f1f1f"/><rect x="8" y="14" width="3" height="3" fill="#1f1f1f"/><rect x="2" y="17" width="4" height="1" fill="#0a0a0a"/><rect x="8" y="17" width="4" height="1" fill="#0a0a0a"/></svg></div>);
   const Player = ({ flash, invincible, y }) => (<div style={{ position: 'absolute', left: 80, top: Math.round(y - 64), opacity: invincible ? 0.6 : 1, filter: flash ? 'brightness(2)' : 'none', transform: 'translateZ(0)' }}><svg width="48" height="64" viewBox="0 0 12 16" shapeRendering="crispEdges"><rect x="3" y="0" width="6" height="1" fill="#1a1a1a"/><rect x="2" y="1" width="8" height="1" fill="#1a1a1a"/><rect x="2" y="2" width="8" height="2" fill="#1a1a1a"/><rect x="3" y="4" width="6" height="1" fill="#c4956a"/><rect x="2" y="5" width="8" height="2" fill="#c4956a"/><rect x="4" y="7" width="4" height="1" fill="#c4956a"/><rect x="2" y="8" width="8" height="4" fill="#2563eb"/><rect x="0" y="8" width="2" height="1" fill="#c4956a"/><rect x="0" y="9" width="2" height="2" fill="#c4956a"/><rect x="10" y="8" width="2" height="1" fill="#c4956a"/><rect x="10" y="9" width="2" height="2" fill="#c4956a"/><rect x="2" y="12" width="8" height="1" fill="#1a1a1a"/><rect x="2" y="13" width="3" height="2" fill="#1a1a1a"/><rect x="7" y="13" width="3" height="2" fill="#1a1a1a"/><rect x="1" y="15" width="4" height="1" fill="#374151"/><rect x="7" y="15" width="4" height="1" fill="#374151"/></svg></div>);
 
-  if (gameState === 'start') return (<div style={{ width: '100%', height: '100dvh', minHeight: 500, overflow: 'hidden', background: 'linear-gradient(180deg, #0a0a0a 0%, #151515 100%)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', fontFamily: 'monospace', color: '#fff', position: 'relative' }}><div style={{ fontSize: 11, color: '#555', letterSpacing: 3, marginBottom: 25 }}>FORTUNE5BILLION PRESENTS</div><div style={{ position: 'relative', width: 70, height: 55, marginBottom: 25, filter: 'drop-shadow(0 0 8px rgba(255,255,255,0.8)) drop-shadow(0 0 15px rgba(200,200,255,0.6))' }}><div style={{ position: 'absolute', left: 0, width: 30, height: 45, background: 'linear-gradient(135deg, #4a4a4a 0%, #1a1a1a 30%, #000 50%, #3a3a3a 70%, #1a1a1a 100%)', borderRadius: '50% 0 0 50%', border: '2px solid #666', transform: 'rotate(-15deg)' }} /><div style={{ position: 'absolute', right: 0, width: 30, height: 45, background: 'linear-gradient(225deg, #4a4a4a 0%, #1a1a1a 30%, #000 50%, #3a3a3a 70%, #1a1a1a 100%)', borderRadius: '0 50% 50% 0', border: '2px solid #666', transform: 'rotate(15deg)' }} /><div style={{ position: 'absolute', left: 17, top: 18, width: 36, height: 10, background: '#f5f5f0', borderRadius: 2, boxShadow: '0 0 6px rgba(255,255,255,0.5)' }} /><div style={{ position: 'absolute', left: 8, top: 8, width: 10, height: 10, background: 'linear-gradient(135deg, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.3) 50%, transparent 100%)', borderRadius: '50%' }} /><div style={{ position: 'absolute', right: 12, top: 28, width: 5, height: 5, background: 'rgba(255,255,255,0.6)', borderRadius: '50%' }} /></div><h1 style={{ fontSize: 42, fontWeight: 'bold', letterSpacing: 8, margin: 0, textShadow: '0 0 25px rgba(255,255,255,0.2)' }}>N.I.R.A.</h1><div style={{ fontSize: 13, color: '#666', letterSpacing: 2, marginTop: 8, marginBottom: 35 }}>{glitchText}</div><div onClick={initGame} onTouchStart={initGame} style={{ padding: '14px 45px', fontSize: 13, border: '2px solid #fff', letterSpacing: 4, cursor: 'pointer' }}>TAP TO START</div><div style={{ fontSize: 9, color: '#888', marginTop: 30, textAlign: 'center', lineHeight: 1.8 }}>COLLECT FORTUNES • DODGE EXECUTIVES & CONTRACTS<br/>LOSE ALL COOKIES = GAME OVER</div><div style={{ position: 'absolute', bottom: 20, textAlign: 'center' }}><a href="/" onClick={(e) => e.stopPropagation()} style={{ fontSize: 9, color: '#666', textDecoration: 'none', letterSpacing: 2, display: 'inline-block', padding: '6px 20px', cursor: 'pointer' }}>VISIT FORTUNE5BILLION.COM</a><div style={{ fontSize: 8, color: '#333', marginTop: 4, letterSpacing: 1 }}>© 2026 FORTUNE5BILLION INC. All Rights Reserved.</div></div></div>);
-  if (gameState === 'dead') return (<div style={{ width: '100%', height: '100dvh', minHeight: 500, overflow: 'hidden', background: 'linear-gradient(180deg, #0a0a0a 0%, #100000 100%)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', fontFamily: 'monospace', color: '#fff', position: 'relative' }}><div style={{ fontSize: 11, color: '#600', letterSpacing: 3, marginBottom: 20 }}>BYE BYE MASTERS</div><h1 style={{ fontSize: 28, letterSpacing: 4, margin: 0, marginBottom: 15, color: '#ff4444' }}>THEY GOT YOU</h1><div style={{ fontSize: 12, color: '#666', marginBottom: 30 }}>THE INDUSTRY WINS THIS ROUND</div><div onClick={initGame} onTouchStart={initGame} style={{ padding: '14px 35px', fontSize: 13, border: '2px solid #fff', letterSpacing: 3, cursor: 'pointer', marginBottom: 15 }}>TAP TO TRY AGAIN</div><a href="https://ko-fi.com/fortune5billion" target="_blank" rel="noopener noreferrer" style={{ padding: '12px 25px', fontSize: 11, fontFamily: 'monospace', background: 'transparent', border: '1px solid #ff6b6b', color: '#ff6b6b', textDecoration: 'none', letterSpacing: 2, cursor: 'pointer', display: 'inline-block', boxShadow: '0 0 10px rgba(255,107,107,0.4), 0 0 20px rgba(255,107,107,0.2)', textShadow: '0 0 8px rgba(255,107,107,0.5)' }}>SUPPORT THE PRODUCER</a><div style={{ position: 'absolute', bottom: 20, textAlign: 'center' }}><a href="/" style={{ fontSize: 9, color: '#666', textDecoration: 'none', letterSpacing: 2, display: 'inline-block', padding: '6px 20px', cursor: 'pointer' }}>VISIT FORTUNE5BILLION.COM</a><div style={{ fontSize: 8, color: '#333', marginTop: 4, letterSpacing: 1 }}>© 2026 FORTUNE5BILLION INC. All Rights Reserved.</div></div></div>);
-  if (gameState === 'end') return (<div style={{ width: '100%', height: '100dvh', minHeight: 500, overflow: 'hidden', background: 'linear-gradient(180deg, #0a0a0a 0%, #151515 100%)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', fontFamily: 'monospace', color: '#fff', position: 'relative' }}><div style={{ fontSize: 14, color: '#888', marginBottom: 30 }}>YOU KEPT YOUR FORTUNE</div><h1 style={{ fontSize: 32, letterSpacing: 6, margin: 0, marginBottom: 15 }}>N.I.R.A. VOL 1</h1><div style={{ fontSize: 12, color: '#555', textAlign: 'center', lineHeight: 1.8, marginBottom: 35 }}>AN AUDITORY EXPERIENCE DESIGNED BY<br /><span style={{ color: '#fff', letterSpacing: 2 }}>FORTUNE5BILLION</span></div><a href="#" target="_blank" rel="noopener noreferrer" style={{ padding: '14px 35px', fontSize: 13, fontFamily: 'monospace', background: '#fff', color: '#000', textDecoration: 'none', letterSpacing: 3, marginBottom: 12, display: 'inline-block' }}>PRE-SAVE VOL 1 NOW</a><a href="https://ko-fi.com/fortune5billion" target="_blank" rel="noopener noreferrer" style={{ padding: '14px 35px', fontSize: 13, fontFamily: 'monospace', background: '#fff', color: '#000', textDecoration: 'none', letterSpacing: 3, marginBottom: 12, display: 'inline-block' }}>BUY HQ ALBUM NOW</a><button onClick={initGame} onTouchStart={initGame} style={{ padding: '10px 25px', fontSize: 11, fontFamily: 'monospace', background: 'transparent', border: '1px solid #444', color: '#444', cursor: 'pointer', letterSpacing: 2 }}>PLAY AGAIN</button><div style={{ position: 'absolute', bottom: 20, textAlign: 'center' }}><a href="/" style={{ fontSize: 9, color: '#666', textDecoration: 'none', letterSpacing: 2, display: 'inline-block', padding: '6px 20px', cursor: 'pointer' }}>VISIT FORTUNE5BILLION.COM</a><div style={{ fontSize: 8, color: '#333', marginTop: 4, letterSpacing: 1 }}>© 2026 FORTUNE5BILLION INC. All Rights Reserved.</div></div></div>);
+  if (gameState === 'start') return (<div style={{ width: '100%', height: '100dvh', minHeight: 500, overflow: 'hidden', background: 'linear-gradient(180deg, #0a0a0a 0%, #151515 100%)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', fontFamily: 'monospace', color: '#fff', position: 'relative' }}><div style={{ fontSize: 11, color: '#555', letterSpacing: 3, marginBottom: 25 }}>FORTUNE5BILLION PRESENTS</div><div style={{ position: 'relative', width: 70, height: 55, marginBottom: 25, filter: 'drop-shadow(0 0 8px rgba(255,255,255,0.8)) drop-shadow(0 0 15px rgba(200,200,255,0.6))' }}><div style={{ position: 'absolute', left: 0, width: 30, height: 45, background: 'linear-gradient(135deg, #4a4a4a 0%, #1a1a1a 30%, #000 50%, #3a3a3a 70%, #1a1a1a 100%)', borderRadius: '50% 0 0 50%', border: '2px solid #666', transform: 'rotate(-15deg)' }} /><div style={{ position: 'absolute', right: 0, width: 30, height: 45, background: 'linear-gradient(225deg, #4a4a4a 0%, #1a1a1a 30%, #000 50%, #3a3a3a 70%, #1a1a1a 100%)', borderRadius: '0 50% 50% 0', border: '2px solid #666', transform: 'rotate(15deg)' }} /><div style={{ position: 'absolute', left: 17, top: 18, width: 36, height: 10, background: '#f5f5f0', borderRadius: 2, boxShadow: '0 0 6px rgba(255,255,255,0.5)' }} /><div style={{ position: 'absolute', left: 8, top: 8, width: 10, height: 10, background: 'linear-gradient(135deg, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.3) 50%, transparent 100%)', borderRadius: '50%' }} /><div style={{ position: 'absolute', right: 12, top: 28, width: 5, height: 5, background: 'rgba(255,255,255,0.6)', borderRadius: '50%' }} /></div><h1 style={{ fontSize: 42, fontWeight: 'bold', letterSpacing: 8, margin: 0, textShadow: '0 0 25px rgba(255,255,255,0.2)' }}>N.I.R.A.</h1><div style={{ fontSize: 13, color: '#666', letterSpacing: 2, marginTop: 8, marginBottom: 35 }}>{glitchText}</div><div onPointerDown={initGame} style={{ padding: '14px 45px', fontSize: 13, border: '2px solid #fff', letterSpacing: 4, cursor: 'pointer' }}>TAP TO START</div><div style={{ fontSize: 9, color: '#888', marginTop: 30, textAlign: 'center', lineHeight: 1.8 }}>COLLECT FORTUNES • DODGE EXECUTIVES & CONTRACTS<br/>LOSE ALL COOKIES = GAME OVER</div><div style={{ position: 'absolute', bottom: 20, textAlign: 'center' }}><a href="/" onClick={(e) => e.stopPropagation()} style={{ fontSize: 9, color: '#666', textDecoration: 'none', letterSpacing: 2, display: 'inline-block', padding: '6px 20px', cursor: 'pointer' }}>VISIT FORTUNE5BILLION.COM</a><div style={{ fontSize: 8, color: '#333', marginTop: 4, letterSpacing: 1 }}>© 2026 FORTUNE5BILLION INC. All Rights Reserved.</div></div></div>);
+  if (gameState === 'dead') return (<div style={{ width: '100%', height: '100dvh', minHeight: 500, overflow: 'hidden', background: 'linear-gradient(180deg, #0a0a0a 0%, #100000 100%)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', fontFamily: 'monospace', color: '#fff', position: 'relative' }}><div style={{ fontSize: 11, color: '#600', letterSpacing: 3, marginBottom: 20 }}>BYE BYE MASTERS</div><h1 style={{ fontSize: 28, letterSpacing: 4, margin: 0, marginBottom: 15, color: '#ff4444' }}>THEY GOT YOU</h1><div style={{ fontSize: 12, color: '#666', marginBottom: 30 }}>THE INDUSTRY WINS THIS ROUND</div><div onPointerDown={initGame} style={{ padding: '14px 35px', fontSize: 13, border: '2px solid #fff', letterSpacing: 3, cursor: 'pointer', marginBottom: 15 }}>TAP TO TRY AGAIN</div><a href="https://ko-fi.com/fortune5billion" target="_blank" rel="noopener noreferrer" style={{ padding: '12px 25px', fontSize: 11, fontFamily: 'monospace', background: 'transparent', border: '1px solid #ff6b6b', color: '#ff6b6b', textDecoration: 'none', letterSpacing: 2, cursor: 'pointer', display: 'inline-block', boxShadow: '0 0 10px rgba(255,107,107,0.4), 0 0 20px rgba(255,107,107,0.2)', textShadow: '0 0 8px rgba(255,107,107,0.5)' }}>SUPPORT THE PRODUCER</a><div style={{ position: 'absolute', bottom: 20, textAlign: 'center' }}><a href="/" style={{ fontSize: 9, color: '#666', textDecoration: 'none', letterSpacing: 2, display: 'inline-block', padding: '6px 20px', cursor: 'pointer' }}>VISIT FORTUNE5BILLION.COM</a><div style={{ fontSize: 8, color: '#333', marginTop: 4, letterSpacing: 1 }}>© 2026 FORTUNE5BILLION INC. All Rights Reserved.</div></div></div>);
+  if (gameState === 'end') return (<div style={{ width: '100%', height: '100dvh', minHeight: 500, overflow: 'hidden', background: 'linear-gradient(180deg, #0a0a0a 0%, #151515 100%)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', fontFamily: 'monospace', color: '#fff', position: 'relative' }}><div style={{ fontSize: 14, color: '#888', marginBottom: 30 }}>YOU KEPT YOUR FORTUNE</div><h1 style={{ fontSize: 32, letterSpacing: 6, margin: 0, marginBottom: 15 }}>N.I.R.A. VOL 1</h1><div style={{ fontSize: 12, color: '#555', textAlign: 'center', lineHeight: 1.8, marginBottom: 35 }}>AN AUDITORY EXPERIENCE DESIGNED BY<br /><span style={{ color: '#fff', letterSpacing: 2 }}>FORTUNE5BILLION</span></div><a href="#" target="_blank" rel="noopener noreferrer" style={{ padding: '14px 35px', fontSize: 13, fontFamily: 'monospace', background: '#fff', color: '#000', textDecoration: 'none', letterSpacing: 3, marginBottom: 12, display: 'inline-block' }}>PRE-SAVE VOL 1 NOW</a><a href="https://ko-fi.com/fortune5billion" target="_blank" rel="noopener noreferrer" style={{ padding: '14px 35px', fontSize: 13, fontFamily: 'monospace', background: '#fff', color: '#000', textDecoration: 'none', letterSpacing: 3, marginBottom: 12, display: 'inline-block' }}>BUY HQ ALBUM NOW</a><button onPointerDown={initGame} style={{ padding: '10px 25px', fontSize: 11, fontFamily: 'monospace', background: 'transparent', border: '1px solid #444', color: '#444', cursor: 'pointer', letterSpacing: 2 }}>PLAY AGAIN</button><div style={{ position: 'absolute', bottom: 20, textAlign: 'center' }}><a href="/" style={{ fontSize: 9, color: '#666', textDecoration: 'none', letterSpacing: 2, display: 'inline-block', padding: '6px 20px', cursor: 'pointer' }}>VISIT FORTUNE5BILLION.COM</a><div style={{ fontSize: 8, color: '#333', marginTop: 4, letterSpacing: 1 }}>© 2026 FORTUNE5BILLION INC. All Rights Reserved.</div></div></div>);
 
   return (
     <div onClick={() => { if (frozen) return; const g = gameRef.current; if (g.playerY >= GROUND - 5 && !g.isJumping) { g.isJumping = true; g.velocity = -780; playSound(audioCtxRef.current, 'jump'); } }} style={{ width: '100%', height: '100dvh', minHeight: 500, overflow: 'hidden', background: hitFlash ? '#200000' : '#0a0a0a', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', fontFamily: 'monospace', userSelect: 'none', cursor: 'pointer', transition: 'background 0.1s', position: 'relative', paddingBottom: 60 }}>
