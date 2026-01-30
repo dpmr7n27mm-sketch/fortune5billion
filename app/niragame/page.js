@@ -10,23 +10,33 @@ const createAudioContext = () => {
   return null;
 };
 
-// Background Music Controller - precise loop timing
+// Background Music Controller - precise loop timing with backup
 const createMusicPlayer = () => {
   let audio = null;
   let isLoaded = false;
   let loopChecker = null;
   const LOOP_POINT = 22.5;
   
+  const checkLoop = () => {
+    if (audio && audio.currentTime >= LOOP_POINT) {
+      audio.currentTime = 0;
+    }
+  };
+  
   return {
     load: (src) => {
       if (audio) {
         audio.pause();
+        audio.removeEventListener('timeupdate', checkLoop);
         audio.src = '';
       }
       if (loopChecker) clearInterval(loopChecker);
       
       audio = new Audio(src);
       audio.volume = 0.4;
+      
+      // Backup loop check via timeupdate (works even when tab is throttled)
+      audio.addEventListener('timeupdate', checkLoop);
       
       audio.addEventListener('canplaythrough', () => {
         isLoaded = true;
@@ -38,11 +48,8 @@ const createMusicPlayer = () => {
       
       const startPlayback = () => {
         audio.play().catch(() => {});
-        loopChecker = setInterval(() => {
-          if (audio && audio.currentTime >= LOOP_POINT) {
-            audio.currentTime = 0;
-          }
-        }, 16); // Check every 16ms (~60fps) for precise timing
+        // Primary loop check - precise when tab is active
+        loopChecker = setInterval(checkLoop, 16);
       };
       
       if (audio && isLoaded) {
