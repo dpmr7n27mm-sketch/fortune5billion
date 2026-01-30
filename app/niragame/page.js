@@ -17,6 +17,7 @@ const createMusicPlayer = (audioCtx) => {
   let audioBuffer = null;
   let isPlaying = false;
   let isLoaded = false;
+  let queuedPlay = false; // Fixes race condition (tap before load)
   
   // Connect to output
   gainNode.connect(audioCtx.destination);
@@ -50,25 +51,24 @@ const createMusicPlayer = (audioCtx) => {
         const arrayBuffer = await response.arrayBuffer();
         audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
         isLoaded = true;
+        // If user tapped play while we were loading, start now
+        if (queuedPlay) {
+          startPlayback();
+        }
       } catch (e) {
         console.error("Audio load failed", e);
       }
     },
     play: () => {
-      // FIX: Ensure context is fully resumed BEFORE trying to play
-      const run = () => {
-        if (!isPlaying && isLoaded && audioBuffer) {
-          startPlayback();
-        }
-      };
-
-      if (audioCtx.state === 'suspended') {
-        audioCtx.resume().then(run).catch(run);
-      } else {
-        run();
+      queuedPlay = true; // Remember we want to play
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+      
+      if (!isPlaying && isLoaded && audioBuffer) {
+        startPlayback();
       }
     },
     stop: () => {
+      queuedPlay = false; // Cancel any queued play
       if (source) {
         try { source.stop(); source.disconnect(); } catch (e) {}
         source = null;
