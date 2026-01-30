@@ -10,47 +10,66 @@ const createAudioContext = () => {
   return null;
 };
 
-// Background Music Controller - native loop
+// Background Music Controller - Web Audio API for sample-accurate looping
 const createMusicPlayer = () => {
-  let audio = null;
+  let audioContext = null;
+  let audioBuffer = null;
+  let sourceNode = null;
+  let gainNode = null;
   let isLoaded = false;
+  let isPlaying = false;
+  const LOOP_END = 22.58; // Exact end point in seconds from FL Studio
   
   return {
     load: (src) => {
-      if (audio) {
-        audio.pause();
-        audio.src = '';
-      }
-      audio = new Audio(src);
-      audio.loop = true;
-      audio.volume = 0.4;
+      audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      gainNode = audioContext.createGain();
+      gainNode.gain.value = 0.4;
+      gainNode.connect(audioContext.destination);
       
-      audio.addEventListener('canplaythrough', () => {
-        isLoaded = true;
-      });
-      audio.load();
+      fetch(src)
+        .then(response => response.arrayBuffer())
+        .then(arrayBuffer => audioContext.decodeAudioData(arrayBuffer))
+        .then(buffer => {
+          audioBuffer = buffer;
+          isLoaded = true;
+        })
+        .catch(err => console.error('Audio load error:', err));
     },
     play: () => {
-      if (audio && isLoaded) {
-        audio.play().catch(() => {});
-      } else if (audio) {
-        audio.addEventListener('canplaythrough', () => {
-          audio.play().catch(() => {});
-        }, { once: true });
+      if (!isLoaded || !audioBuffer || isPlaying) return;
+      
+      // Resume context if suspended (browser autoplay policy)
+      if (audioContext.state === 'suspended') {
+        audioContext.resume();
       }
+      
+      // Create new source node (required for each play)
+      sourceNode = audioContext.createBufferSource();
+      sourceNode.buffer = audioBuffer;
+      sourceNode.loop = true;
+      sourceNode.loopStart = 0;
+      sourceNode.loopEnd = LOOP_END;
+      sourceNode.connect(gainNode);
+      sourceNode.start(0);
+      isPlaying = true;
     },
     pause: () => {
-      if (audio) audio.pause();
+      if (sourceNode && isPlaying) {
+        sourceNode.stop();
+        isPlaying = false;
+      }
     },
     stop: () => {
-      if (audio) { audio.pause(); audio.currentTime = 0; }
+      if (sourceNode && isPlaying) {
+        sourceNode.stop();
+        isPlaying = false;
+      }
     },
     setVolume: (vol) => {
-      if (audio) audio.volume = Math.max(0, Math.min(1, vol));
+      if (gainNode) gainNode.gain.value = Math.max(0, Math.min(1, vol));
     },
-    isPlaying: () => {
-      return audio && !audio.paused;
-    }
+    isPlaying: () => isPlaying
   };
 };
 
