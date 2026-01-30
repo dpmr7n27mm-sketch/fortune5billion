@@ -16,51 +16,61 @@ const createMusicPlayer = (audioCtx) => {
   let gainNode = audioCtx.createGain();
   let audioBuffer = null;
   let isPlaying = false;
+  let shouldPlayAfterLoad = false;
   
   // This volume connects to the main context destination
   gainNode.connect(audioCtx.destination);
   gainNode.gain.value = 0.4;
 
-  const LOOP_POINT = 22.5; // Your specific loop point
+  // UPDATED: Precise loop point based on 22s 580ms
+  const LOOP_POINT = 22.58; 
+
+  const startSource = () => {
+    // Stop existing source if any to prevent layering
+    if (source) {
+      try { source.stop(); source.disconnect(); } catch(e) {}
+    }
+    
+    source = audioCtx.createBufferSource();
+    source.buffer = audioBuffer;
+    source.loop = true;
+    source.loopStart = 0;
+    source.loopEnd = LOOP_POINT;
+    
+    source.connect(gainNode);
+    source.start(0);
+    isPlaying = true;
+  };
 
   return {
     load: async (url) => {
       try {
         const response = await fetch(url);
         const arrayBuffer = await response.arrayBuffer();
-        // Decode the audio data asynchronously
         audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+        
+        // If play() was called while we were loading, start now
+        if (shouldPlayAfterLoad) {
+          startSource();
+        }
       } catch (error) {
         console.error("Error loading music:", error);
       }
     },
     play: () => {
-      // Prevent multiple overlays
+      shouldPlayAfterLoad = true;
       if (isPlaying) return;
-      if (!audioBuffer) return;
-
-      // Create a new source node for every playback (required by Web Audio API)
-      source = audioCtx.createBufferSource();
-      source.buffer = audioBuffer;
-      source.loop = true;
-      
-      // SAMPLE-ACCURATE LOOPING
-      // This is the critical fix: we tell the audio driver exactly where to loop
-      source.loopStart = 0;
-      source.loopEnd = LOOP_POINT; 
-
-      source.connect(gainNode);
-      source.start(0);
-      isPlaying = true;
+      if (audioBuffer) {
+        startSource();
+      }
     },
     stop: () => {
+      shouldPlayAfterLoad = false;
       if (source) {
         try {
           source.stop();
           source.disconnect();
-        } catch (e) {
-          // Ignore errors if already stopped
-        }
+        } catch (e) {}
         source = null;
       }
       isPlaying = false;
@@ -465,41 +475,45 @@ export default function NIRAGame() {
   const [glitchBurst, setGlitchBurst] = useState(false);
   const [frozen, setFrozen] = useState(false);
 
-  // Initialize Audio Context once
+  // Initialize Audio Context and Pre-load Music
   useEffect(() => {
     if (!audioCtxRef.current) {
         audioCtxRef.current = createAudioContext();
+        // Load music immediately so it's ready for tap
+        musicPlayerRef.current = createMusicPlayer(audioCtxRef.current);
+        musicPlayerRef.current.load('/nira-bgm.mp3');
     }
-  }, []);
-
-  // Start music on first user interaction (required by browsers)
-  useEffect(() => {
-    const startMusic = () => {
-      if (!musicStarted && audioCtxRef.current) {
-        // Must resume context first
-        if (audioCtxRef.current.state === 'suspended') {
-            audioCtxRef.current.resume();
-        }
-
-        try {
-          if (!musicPlayerRef.current) {
-            // Pass the existing audio context to the player
-            musicPlayerRef.current = createMusicPlayer(audioCtxRef.current);
-            musicPlayerRef.current.load('/nira-bgm.mp3');
-          }
-          musicPlayerRef.current.play();
-          setMusicStarted(true);
-        } catch (e) {
-          // Music file not available
-          console.log("Music error", e);
+    
+    // Resume audio context when tab becomes visible again
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        if (audioCtxRef.current && audioCtxRef.current.state === 'suspended') {
+          audioCtxRef.current.resume();
         }
       }
     };
     
-    // Listen for any user interaction to start music
-    document.addEventListener('click', startMusic, { once: true });
-    document.addEventListener('touchstart', startMusic, { once: true });
-    document.addEventListener('keydown', startMusic, { once: true });
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, []);
+
+  // Global touch listener to ensure music starts on any interaction
+  useEffect(() => {
+    const startMusic = () => {
+      if (!musicStarted && audioCtxRef.current) {
+        if (audioCtxRef.current.state === 'suspended') {
+            audioCtxRef.current.resume();
+        }
+        if (musicPlayerRef.current) {
+          musicPlayerRef.current.play();
+          setMusicStarted(true);
+        }
+      }
+    };
+    
+    document.addEventListener('click', startMusic);
+    document.addEventListener('touchstart', startMusic);
+    document.addEventListener('keydown', startMusic);
     
     return () => {
       document.removeEventListener('click', startMusic);
@@ -521,15 +535,12 @@ export default function NIRAGame() {
   const hitMessages = ["THEY TOOK YOUR FORTUNE", "BAD DEAL SIGNED", "READ THE FINE PRINT", "360 DEAL ACTIVATED", "LOST YOUR MASTERS", "RIGHTS GONE IN PERPETUITY", "ADVANCE TRAP", "SIGNED YOUR RIGHTS AWAY"];
 
   const initGame = useCallback(() => {
-    // Resume music if it was stopped (on death/win)
-    try {
-        if (audioCtxRef.current && audioCtxRef.current.state === 'suspended') {
-            audioCtxRef.current.resume();
-        }
-        if (musicPlayerRef.current) {
-            musicPlayerRef.current.play();
-        }
-    } catch (e) {}
+    // Explicitly trigger music start on button press
+    if (audioCtxRef.current) {
+      if (audioCtxRef.current.state === 'suspended') audioCtxRef.current.resume();
+      if (musicPlayerRef.current) musicPlayerRef.current.play();
+      setMusicStarted(true);
+    }
     
     const g = gameRef.current;
     Object.assign(g, { cookies: [], goldenCookies: [], executives: [], contracts: [], pits: [], playerY: GROUND, velocity: 0, distance: 0, collected: 0, isJumping: false, invincible: false, lastTime: performance.now(), nextCookieX: 300, nextGoldenX: 2000, nextExecX: 600, nextContractX: 500, nextPitX: 900, cookieId: 0, goldenId: 0, execId: 0, contractId: 0, pitId: 0 });
