@@ -10,66 +10,73 @@ const createAudioContext = () => {
   return null;
 };
 
-// Background Music Controller - precise loop timing
-const createMusicPlayer = () => {
-  let audio = null;
-  let isLoaded = false;
-  let loopChecker = null;
-  const LOOP_POINT = 22.5;
+// REWRITTEN: Music Player using Web Audio API for gapless looping
+const createMusicPlayer = (audioCtx) => {
+  let source = null;
+  let gainNode = audioCtx.createGain();
+  let audioBuffer = null;
+  let isPlaying = false;
   
+  // This volume connects to the main context destination
+  gainNode.connect(audioCtx.destination);
+  gainNode.gain.value = 0.4;
+
+  const LOOP_POINT = 22.5; // Your specific loop point
+
   return {
-    load: (src) => {
-      if (audio) {
-        audio.pause();
-        audio.src = '';
+    load: async (url) => {
+      try {
+        const response = await fetch(url);
+        const arrayBuffer = await response.arrayBuffer();
+        // Decode the audio data asynchronously
+        audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+      } catch (error) {
+        console.error("Error loading music:", error);
       }
-      if (loopChecker) clearInterval(loopChecker);
-      
-      audio = new Audio(src);
-      audio.volume = 0.4;
-      
-      audio.addEventListener('canplaythrough', () => {
-        isLoaded = true;
-      });
-      audio.load();
     },
     play: () => {
-      if (loopChecker) clearInterval(loopChecker);
+      // Prevent multiple overlays
+      if (isPlaying) return;
+      if (!audioBuffer) return;
+
+      // Create a new source node for every playback (required by Web Audio API)
+      source = audioCtx.createBufferSource();
+      source.buffer = audioBuffer;
+      source.loop = true;
       
-      const startPlayback = () => {
-        audio.play().catch(() => {});
-        loopChecker = setInterval(() => {
-          if (audio && audio.currentTime >= LOOP_POINT) {
-            audio.currentTime = 0;
-          }
-        }, 16);
-      };
-      
-      if (audio && isLoaded) {
-        startPlayback();
-      } else if (audio) {
-        audio.addEventListener('canplaythrough', startPlayback, { once: true });
-      }
-    },
-    pause: () => {
-      if (audio) audio.pause();
-      if (loopChecker) clearInterval(loopChecker);
+      // SAMPLE-ACCURATE LOOPING
+      // This is the critical fix: we tell the audio driver exactly where to loop
+      source.loopStart = 0;
+      source.loopEnd = LOOP_POINT; 
+
+      source.connect(gainNode);
+      source.start(0);
+      isPlaying = true;
     },
     stop: () => {
-      if (loopChecker) clearInterval(loopChecker);
-      if (audio) { audio.pause(); audio.currentTime = 0; }
+      if (source) {
+        try {
+          source.stop();
+          source.disconnect();
+        } catch (e) {
+          // Ignore errors if already stopped
+        }
+        source = null;
+      }
+      isPlaying = false;
     },
     setVolume: (vol) => {
-      if (audio) audio.volume = Math.max(0, Math.min(1, vol));
+      const clamped = Math.max(0, Math.min(1, vol));
+      gainNode.gain.cancelScheduledValues(audioCtx.currentTime);
+      gainNode.gain.setValueAtTime(clamped, audioCtx.currentTime);
     },
-    isPlaying: () => {
-      return audio && !audio.paused;
-    }
+    isPlaying: () => isPlaying
   };
 };
 
 const playSound = (audioCtx, type) => {
   if (!audioCtx) return;
+  // Ensure context is running (browsers suspend it by default until interaction)
   if (audioCtx.state === 'suspended') audioCtx.resume();
   
   const now = audioCtx.currentTime;
@@ -458,19 +465,33 @@ export default function NIRAGame() {
   const [glitchBurst, setGlitchBurst] = useState(false);
   const [frozen, setFrozen] = useState(false);
 
+  // Initialize Audio Context once
+  useEffect(() => {
+    if (!audioCtxRef.current) {
+        audioCtxRef.current = createAudioContext();
+    }
+  }, []);
+
   // Start music on first user interaction (required by browsers)
   useEffect(() => {
     const startMusic = () => {
-      if (!musicStarted) {
+      if (!musicStarted && audioCtxRef.current) {
+        // Must resume context first
+        if (audioCtxRef.current.state === 'suspended') {
+            audioCtxRef.current.resume();
+        }
+
         try {
           if (!musicPlayerRef.current) {
-            musicPlayerRef.current = createMusicPlayer();
+            // Pass the existing audio context to the player
+            musicPlayerRef.current = createMusicPlayer(audioCtxRef.current);
             musicPlayerRef.current.load('/nira-bgm.mp3');
           }
           musicPlayerRef.current.play();
           setMusicStarted(true);
         } catch (e) {
           // Music file not available
+          console.log("Music error", e);
         }
       }
     };
@@ -500,17 +521,14 @@ export default function NIRAGame() {
   const hitMessages = ["THEY TOOK YOUR FORTUNE", "BAD DEAL SIGNED", "READ THE FINE PRINT", "360 DEAL ACTIVATED", "LOST YOUR MASTERS", "RIGHTS GONE IN PERPETUITY", "ADVANCE TRAP", "SIGNED YOUR RIGHTS AWAY"];
 
   const initGame = useCallback(() => {
-    // Always recreate AudioContext to fix stale audio after idle
-    if (audioCtxRef.current) {
-      try { audioCtxRef.current.close(); } catch (e) {}
-    }
-    audioCtxRef.current = createAudioContext();
-    
     // Resume music if it was stopped (on death/win)
     try {
-      if (musicPlayerRef.current) {
-        musicPlayerRef.current.play();
-      }
+        if (audioCtxRef.current && audioCtxRef.current.state === 'suspended') {
+            audioCtxRef.current.resume();
+        }
+        if (musicPlayerRef.current) {
+            musicPlayerRef.current.play();
+        }
     } catch (e) {}
     
     const g = gameRef.current;
