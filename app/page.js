@@ -18,16 +18,16 @@ export default function FortuneHub() {
   }, [carouselImages.length]);
 
   // --- GLITCH TEXT EFFECT (exact from game) ---
-  const [glitchText, setGlitchText] = useState('NOTHING IS REAL ANYMORE');
+  const [glitchText, setGlitchText] = useState('NOTHING IS REAL ANYMORE.');
 
   useEffect(() => {
     const glitch = setInterval(() => {
       if (Math.random() > 0.7) {
         const chars = '░▒▓█▄▀ΞΩΨΔ';
-        setGlitchText('NOTHING IS REAL ANYMORE'.split('').map(c => 
+        setGlitchText('NOTHING IS REAL ANYMORE.'.split('').map(c =>
           Math.random() > 0.85 ? chars[Math.floor(Math.random() * chars.length)] : c
         ).join(''));
-        setTimeout(() => setGlitchText('NOTHING IS REAL ANYMORE'), 100);
+        setTimeout(() => setGlitchText('NOTHING IS REAL ANYMORE.'), 100);
       }
     }, 250);
     return () => clearInterval(glitch);
@@ -48,7 +48,7 @@ export default function FortuneHub() {
     <div style={{
       width: '100%',
       minHeight: '100vh',
-      background: 'linear-gradient(180deg, #0a0a0a 0%, #151515 100%)',
+      background: 'radial-gradient(ellipse 40% 30% at 50% 14%, rgba(20,220,110,0.06) 0%, transparent 60%), radial-gradient(ellipse 72% 55% at 50% 22%, rgba(0,85,65,0.18) 0%, transparent 65%), linear-gradient(180deg, #0a0a0a 0%, #151515 100%)',
       display: 'flex',
       flexDirection: 'column',
       alignItems: 'center',
@@ -59,13 +59,21 @@ export default function FortuneHub() {
       overflowX: 'hidden',
       position: 'relative',
     }}>
+      <style>{`
+        @keyframes float {
+          0%, 100% { transform: translateY(0px); }
+          50% { transform: translateY(-8px); }
+        }
+      `}</style>
+
       {/* Header - exact styling from game */}
-      <div style={{ 
-        fontSize: 11, 
-        color: '#555', 
-        letterSpacing: 3, 
+      <div style={{
+        fontSize: 9,
+        color: '#555',
+        letterSpacing: 6,
         marginBottom: 25,
         textAlign: 'center',
+        opacity: 0.55,
       }}>
         FORTUNE5BILLION PRESENTS
       </div>
@@ -77,7 +85,7 @@ export default function FortuneHub() {
         aspectRatio: '1 / 1',
         position: 'relative',
         marginBottom: 25,
-        boxShadow: '0 0 60px rgba(0,0,0,0.8)',
+        animation: 'float 5s ease-in-out infinite',
       }}>
         {carouselImages.map((img, idx) => (
           <img 
@@ -99,14 +107,27 @@ export default function FortuneHub() {
       </div>
 
       {/* Glitch Text - exact styling from game */}
-      <div style={{ 
-        fontSize: 13, 
-        color: '#666', 
-        letterSpacing: 2, 
-        marginBottom: 35,
+      <div style={{
+        fontSize: 17,
+        color: '#666',
+        letterSpacing: 5,
+        marginTop: 12,
+        marginBottom: 8,
         textAlign: 'center',
+        textShadow: '0 0 18px rgba(255,255,255,0.07), 0 2px 6px rgba(0,0,0,0.7)',
       }}>
         {glitchText}
+      </div>
+
+      <div style={{
+        fontSize: 9,
+        color: '#555',
+        letterSpacing: 6,
+        marginBottom: 40,
+        textAlign: 'center',
+        opacity: 0.55,
+      }}>
+        VOLUME ONE
       </div>
 
       {/* Button Stack */}
@@ -137,7 +158,7 @@ export default function FortuneHub() {
               letterSpacing: 3,
               textAlign: 'center',
               cursor: 'pointer',
-              transition: 'all 0.15s ease',
+              transition: 'all 0.2s ease',
               width: '100%',
               boxSizing: 'border-box',
             }}
@@ -146,6 +167,18 @@ export default function FortuneHub() {
           </a>
         ))}
       </div>
+
+      {/* Grain texture overlay */}
+      <div style={{
+        position: 'absolute',
+        top: 0, left: 0, right: 0, bottom: 0,
+        backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E\")",
+        backgroundRepeat: 'repeat',
+        backgroundSize: '200px 200px',
+        opacity: 0.035,
+        pointerEvents: 'none',
+        zIndex: 10,
+      }} />
 
       {/* Footer - exact placement from game screens */}
       <div style={{ 
