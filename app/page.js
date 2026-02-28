@@ -108,13 +108,13 @@ export default function FortuneHub() {
 
       {/* Glitch Text - exact styling from game */}
       <div style={{
-        fontSize: 17,
-        color: '#666',
+        fontSize: 'clamp(12px, 3.5vw, 17px)',
+        color: '#fff',
         letterSpacing: 5,
         marginTop: 12,
         marginBottom: 8,
         textAlign: 'center',
-        textShadow: '0 0 18px rgba(255,255,255,0.07), 0 2px 6px rgba(0,0,0,0.7)',
+        textShadow: '0 0 10px rgba(255,255,255,0.65), 0 0 28px rgba(255,255,255,0.2), 0 2px 8px rgba(0,0,0,0.8)',
       }}>
         {glitchText}
       </div>
