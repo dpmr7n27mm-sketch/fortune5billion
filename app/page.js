@@ -40,7 +40,7 @@ export default function FortuneHub() {
     { id: 'game', label: '▶ PLAY N.I.R.A. GAME NOW', href: '/niragame', external: false },
     { id: 'presave', label: 'PRE-SAVE VOL 1 NOW', href: '#', external: false },
     { id: 'support', label: 'BUY HQ ALBUM / SUPPORT', href: 'https://ko-fi.com/fortune5billion', external: true },
-    { id: 'licensing', label: 'LICENSING & SYNC', href: 'mailto:info@fortune5billion.com', external: false },
+    { id: 'licensing', label: 'LICENSING & SYNC', href: 'https://dealdesk.fortune5billion.com', external: true },
     { id: 'instagram', label: 'FOLLOW @FORTUNE5BILLION', href: 'https://instagram.com/fortune5billion', external: true },
   ];
 
